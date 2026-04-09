@@ -1,0 +1,67 @@
+{
+    "manifest_version": 3,
+    "name": "AI Monitor",
+    "description": "AI 工具用量聚合监控 — 一站式查看多平台 usage",
+    "version": "0.1.0",
+    "icons": {
+        "16": "assets/icons/icon-16.png",
+        "48": "assets/icons/icon-48.png",
+        "128": "assets/icons/icon-128.png"
+    },
+    "permissions": [
+        "alarms",
+        "cookies",
+        "sidePanel",
+        "storage",
+        "activeTab",
+        "scripting",
+        "tabs"
+    ],
+    "host_permissions": [
+        "https://github.com/*",
+        "https://platform.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://www.kimi.com/*"
+    ],
+    "background": {
+        "service_worker": "src/background/index.ts",
+        "type": "module"
+    },
+    "action": {
+        "default_popup": "src/popup/index.html",
+        "default_title": "AI Monitor"
+    },
+    "side_panel": {
+        "default_path": "src/sidepanel/index.html"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://github.com/settings/copilot*",
+                "https://github.com/settings/billing*"
+            ],
+            "js": [
+                "src/content-scripts/github-copilot.ts"
+            ],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://chatgpt.com/codex/cloud/settings/usage*"
+            ],
+            "js": [
+                "src/content-scripts/chatgpt.ts"
+            ],
+            "run_at": "document_idle"
+        },
+        {
+            "matches": [
+                "https://www.kimi.com/code/console*"
+            ],
+            "js": [
+                "src/content-scripts/kimi.ts"
+            ],
+            "run_at": "document_idle"
+        }
+    ]
+}
