@@ -1,5 +1,6 @@
 import { initializeStorage } from '../shared/storage'
 import { ensureAlarmConfigured, initAlarm, setupAlarmListener } from './alarm'
+import { setupContextMenu, setupContextMenuListener } from './contextMenu'
 import { setupMessageListener } from './messaging'
 
 // Extension installed or updated
@@ -7,10 +8,11 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('[AI Monitor] Extension installed/updated')
     await initializeStorage()
     await initAlarm()
+    await setupContextMenu()
 
-    // Configure side panel to open on action click
+    // Keep extension action bound to the popup; side panel is opened explicitly.
     try {
-        await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
+        await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
     } catch {
         // sidePanel API may not be available in all environments
         console.warn('[AI Monitor] sidePanel API not available')
@@ -26,6 +28,7 @@ chrome.runtime.onStartup.addListener(async () => {
 // Setup listeners
 setupAlarmListener()
 setupMessageListener()
+setupContextMenuListener()
 
 void (async () => {
     await initializeStorage()

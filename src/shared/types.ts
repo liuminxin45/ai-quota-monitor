@@ -52,6 +52,7 @@ export type MessageType =
     | 'REFRESH_ALL'
     | 'REFRESH_ONE'
     | 'OPEN_LOGIN'
+    | 'OPEN_SIDEPANEL'
     | 'GET_STATE'
     | 'STATE_UPDATED'
     | 'ADD_PLATFORM'
@@ -88,6 +89,10 @@ export interface OpenLoginMessage extends BaseMessage {
     platformId: PlatformId
 }
 
+export interface OpenSidePanelMessage extends BaseMessage {
+    type: 'OPEN_SIDEPANEL'
+}
+
 export interface GetStateMessage extends BaseMessage {
     type: 'GET_STATE'
 }
@@ -108,6 +113,7 @@ export type AppMessage =
     | RefreshAllMessage
     | RefreshOneMessage
     | OpenLoginMessage
+    | OpenSidePanelMessage
     | GetStateMessage
     | AddPlatformMessage
     | RemovePlatformMessage

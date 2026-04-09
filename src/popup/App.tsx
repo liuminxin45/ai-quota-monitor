@@ -17,8 +17,7 @@ export default function App() {
     }
 
     const handleOpenSidebar = () => {
-        // Open side panel via background message
-        chrome.runtime.sendMessage({ type: 'GET_STATE' })
+        void sendToBackground({ type: 'OPEN_SIDEPANEL' })
     }
 
     if (loading) {
@@ -69,6 +68,15 @@ export default function App() {
                         <PlatformCard key={platform.id} platform={platform} compact />
                     ))
                 )}
+            </div>
+
+            <div className="border-t border-gray-200 bg-white px-3 py-2">
+                <button
+                    onClick={handleOpenSidebar}
+                    className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
+                >
+                    打开侧边栏管理平台
+                </button>
             </div>
         </div>
     )

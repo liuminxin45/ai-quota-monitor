@@ -3,6 +3,7 @@ import { onMessage } from '../shared/messaging'
 import { getAppState, getPlatforms, setPlatforms, updatePlatform } from '../shared/storage'
 import { createDefaultPlatform, PLATFORM_CONFIGS } from '../shared/constants'
 import { refreshAllPlatforms, refreshPlatform, calculateStatus, computeBurdenScore } from './platformManager'
+import { openSidePanelForWindow } from './contextMenu'
 
 export function setupMessageListener(): void {
     onMessage((message: AppMessage, _sender, sendResponse) => {
@@ -34,6 +35,11 @@ async function handleMessage(message: AppMessage): Promise<unknown> {
             if (config) {
                 await chrome.tabs.create({ url: config.usageUrl })
             }
+            return { success: true }
+        }
+
+        case 'OPEN_SIDEPANEL': {
+            await openSidePanelForWindow()
             return { success: true }
         }
 
