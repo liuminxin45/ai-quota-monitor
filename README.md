@@ -1,6 +1,6 @@
 # AI Monitor
 
-![AI Monitor screenshot](public/assets/readme/github-readme-example.png)
+![AI Monitor screenshot](https://raw.githubusercontent.com/liuminxin45/ai-quota-monitor/main/public/assets/readme/github-readme-example.png)
 
 AI Monitor 是一个面向 Edge 浏览器开发的 AI 配额监控扩展，主要用于检测和汇总常见 AI 包月套餐的配额使用情况、重置周期和当前负荷状态。
 
