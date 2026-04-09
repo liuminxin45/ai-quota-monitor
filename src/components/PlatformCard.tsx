@@ -36,12 +36,84 @@ function timeAgo(timestamp: number | null): string {
 }
 
 // Burden score → display config
-// Score = projected end-of-cycle usage %; < 100 = within quota, > 100 = will run out
-function getBurdenConfig(score: number): { label: string; color: string; bg: string; dot: string } {
-    if (score < 60) return { label: '轻松', color: 'text-emerald-700', bg: 'bg-emerald-100', dot: 'bg-emerald-500' }
-    if (score < 100) return { label: '适中', color: 'text-blue-700', bg: 'bg-blue-100', dot: 'bg-blue-500' }
-    if (score < 150) return { label: '偏重', color: 'text-amber-700', bg: 'bg-amber-100', dot: 'bg-amber-500' }
-    return { label: '过载', color: 'text-red-700', bg: 'bg-red-100', dot: 'bg-red-500' }
+// Score = projected end-of-cycle usage %; < 100 = likely within quota, > 100 = likely to run out
+function getBurdenConfig(score: number): {
+    label: string
+    meaning: string
+    color: string
+    bg: string
+    dot: string
+} {
+    if (score < 25) {
+        return {
+            label: '空载',
+            meaning: '当前消耗极低，这个周期内大概率用不完，最适合优先使用。',
+            color: 'text-emerald-800',
+            bg: 'bg-emerald-100',
+            dot: 'bg-emerald-600',
+        }
+    }
+    if (score < 45) {
+        return {
+            label: '很轻',
+            meaning: '当前负荷很低，额度非常宽裕，优先使用风险很小。',
+            color: 'text-lime-800',
+            bg: 'bg-lime-100',
+            dot: 'bg-lime-600',
+        }
+    }
+    if (score < 60) {
+        return {
+            label: '轻松',
+            meaning: '整体仍然宽裕，按当前速度使用基本不会接近上限。',
+            color: 'text-green-800',
+            bg: 'bg-green-100',
+            dot: 'bg-green-600',
+        }
+    }
+    if (score < 80) {
+        return {
+            label: '平稳',
+            meaning: '消耗节奏较稳定，额度仍在安全区间内。',
+            color: 'text-cyan-800',
+            bg: 'bg-cyan-100',
+            dot: 'bg-cyan-600',
+        }
+    }
+    if (score < 100) {
+        return {
+            label: '紧凑',
+            meaning: '接近周期上限，但按当前速度理论上仍能勉强撑到重置。',
+            color: 'text-sky-800',
+            bg: 'bg-sky-100',
+            dot: 'bg-sky-600',
+        }
+    }
+    if (score < 125) {
+        return {
+            label: '偏高',
+            meaning: '如果继续按当前速度使用，较大概率会在重置前耗尽。',
+            color: 'text-amber-800',
+            bg: 'bg-amber-100',
+            dot: 'bg-amber-600',
+        }
+    }
+    if (score < 160) {
+        return {
+            label: '吃紧',
+            meaning: '当前负荷明显偏高，应该尽快切换到额度更宽裕的平台。',
+            color: 'text-orange-800',
+            bg: 'bg-orange-100',
+            dot: 'bg-orange-600',
+        }
+    }
+    return {
+        label: '过载',
+        meaning: '按当前消耗速度，这个平台会明显提前耗尽，不建议继续优先使用。',
+        color: 'text-red-800',
+        bg: 'bg-red-100',
+        dot: 'bg-red-600',
+    }
 }
 
 // Compute countdown info — cycle-aware so progress bar fills over the correct period
@@ -129,10 +201,18 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                 {platform.burdenScore !== undefined && platform.status !== 'not_login' && platform.status !== 'error' ? (() => {
                     const cfg = getBurdenConfig(platform.burdenScore)
                     return (
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${cfg.bg}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                            {cfg.label}
-                        </span>
+                        <div className="relative group">
+                            <span
+                                className={`inline-flex cursor-default items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${cfg.color} ${cfg.bg}`}
+                            >
+                                <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                                {cfg.label}
+                            </span>
+                            <div className="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden w-56 rounded-md bg-gray-900 px-2 py-1.5 text-[11px] leading-4 text-white shadow-lg group-hover:block">
+                                <span className="font-medium text-gray-200">含义：</span>
+                                {cfg.meaning}
+                            </div>
+                        </div>
                     )
                 })() : <StatusBadge status={platform.status} />}
             </div>
