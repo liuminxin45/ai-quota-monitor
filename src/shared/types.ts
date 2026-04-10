@@ -14,6 +14,36 @@ export interface UsageData {
     resetTimestamp?: number // epoch ms — when the quota resets (for unified countdown UI)
 }
 
+export interface UsageSnapshot {
+    timestamp: number
+    used: number
+    total: number
+    unit: string
+    percentage: number
+    remainingPercentage: number
+    resetTimestamp?: number
+    burdenScore?: number
+}
+
+export interface QuotaTrendPoint {
+    timestamp: number
+    remainingPercentage: number
+    usagePercentage: number
+}
+
+export interface QuotaTrendModel {
+    actual: QuotaTrendPoint[]
+    forecast: QuotaTrendPoint[]
+    latestRemainingPercentage: number
+    latestTimestamp: number
+    resetTimestamp?: number
+    projectedDepletionTimestamp?: number
+    projectedRemainingAtReset?: number
+    projectedUsageRatePerDay: number
+    projectedGapToResetMs?: number
+    trendWindow: 'insufficient' | 'recent' | 'cycle' | 'stable'
+}
+
 // Full platform entity
 export interface Platform {
     id: PlatformId
@@ -25,6 +55,8 @@ export interface Platform {
     lastUpdated: number | null
     enabled: boolean
     errorMessage?: string
+    monthlyPriceRmb?: number
+    subscriptionStartedAt?: number
     /**
      * Projected usage % at end of reset cycle, based on current burn rate.
      * <60 = 轻松, 60-100 = 适中, 100-140 = 偏重, >140 = 过载
@@ -36,6 +68,7 @@ export interface Platform {
 export interface GlobalSettings {
     autoRefresh: boolean
     refreshInterval: number // seconds, default 60
+    lastRefreshAllAt?: number
 }
 
 // Full persisted state
@@ -52,7 +85,6 @@ export type MessageType =
     | 'REFRESH_ALL'
     | 'REFRESH_ONE'
     | 'OPEN_LOGIN'
-    | 'OPEN_SIDEPANEL'
     | 'GET_STATE'
     | 'STATE_UPDATED'
     | 'ADD_PLATFORM'
@@ -89,10 +121,6 @@ export interface OpenLoginMessage extends BaseMessage {
     platformId: PlatformId
 }
 
-export interface OpenSidePanelMessage extends BaseMessage {
-    type: 'OPEN_SIDEPANEL'
-}
-
 export interface GetStateMessage extends BaseMessage {
     type: 'GET_STATE'
 }
@@ -113,7 +141,6 @@ export type AppMessage =
     | RefreshAllMessage
     | RefreshOneMessage
     | OpenLoginMessage
-    | OpenSidePanelMessage
     | GetStateMessage
     | AddPlatformMessage
     | RemovePlatformMessage

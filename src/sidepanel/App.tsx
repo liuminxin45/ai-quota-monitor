@@ -1,13 +1,17 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { usePlatforms } from '../hooks/usePlatforms'
 import { PlatformCard } from '../components/PlatformCard'
 import { AddPlatformDialog } from '../components/AddPlatformDialog'
 import { sendToBackground } from '../shared/messaging'
+import { sortPlatformsByBurdenDesc } from '../shared/platformSorting'
+import { formatMonthlyPriceRmb, getTotalMonthlyPriceRmb } from '../shared/pricing'
 
 export default function App() {
     const { platforms, loading, settings } = usePlatforms()
     const [showAddDialog, setShowAddDialog] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
+    const totalMonthlyPriceRmb = useMemo(() => getTotalMonthlyPriceRmb(platforms), [platforms])
+    const titleSuffix = totalMonthlyPriceRmb > 0 ? ` · ${formatMonthlyPriceRmb(totalMonthlyPriceRmb)}` : ''
 
     const handleRefreshAll = async () => {
         setRefreshing(true)
@@ -27,34 +31,36 @@ export default function App() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen overflow-x-hidden bg-gray-50">
             {/* Header */}
             <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 z-10">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-base font-semibold text-gray-900">AI Monitor</h1>
+                        <h1 className="text-base font-semibold text-gray-900">AI Monitor{titleSuffix}</h1>
                         <p className="text-xs text-gray-400">AI 工具用量监控</p>
                     </div>
-                    <button
-                        onClick={handleRefreshAll}
-                        disabled={refreshing}
-                        className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50 transition-colors"
-                        title="刷新全部"
-                    >
-                        <svg
-                            className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleRefreshAll}
+                            disabled={refreshing}
+                            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-md disabled:opacity-50 transition-colors"
+                            title="刷新全部"
                         >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                            />
-                        </svg>
-                    </button>
+                            <svg
+                                className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                                />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -74,20 +80,9 @@ export default function App() {
                     </div>
                 ) : (
                     <>
-                        {[...platforms]
-                            .sort((a, b) => {
-                                // Platforms with no burden data go after scored ones
-                                const sa = a.burdenScore ?? -1
-                                const sb = b.burdenScore ?? -1
-                                if (sa === -1 && sb === -1) return 0
-                                if (sa === -1) return 1
-                                if (sb === -1) return -1
-                                // Lightest burden first (most recommended = top)
-                                return sa - sb
-                            })
-                            .map((platform) => (
-                                <PlatformCard key={platform.id} platform={platform} />
-                            ))}
+                        {sortPlatformsByBurdenDesc(platforms).map((platform) => (
+                            <PlatformCard key={platform.id} platform={platform} />
+                        ))}
                     </>
                 )}
             </div>

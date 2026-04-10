@@ -39,7 +39,7 @@ export const PLATFORM_CONFIGS: Record<PlatformId, Omit<Platform, 'status' | 'usa
 
 // Quota reset cycle length in days per platform
 export const CYCLE_DAYS: Record<PlatformId, number> = {
-    'github-copilot': 30,  // resets monthly on the 9th
+    'github-copilot': 31,  // resets on the 1st at UTC 00:00 (natural month fallback)
     chatgpt: 7,            // weekly Codex quota
     kimi: 7,               // weekly usage quota
 }

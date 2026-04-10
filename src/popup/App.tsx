@@ -2,10 +2,26 @@ import React, { useState } from 'react'
 import { usePlatforms } from '../hooks/usePlatforms'
 import { PlatformCard } from '../components/PlatformCard'
 import { sendToBackground } from '../shared/messaging'
+import { sortPlatformsByBurdenDesc } from '../shared/platformSorting'
+import { formatMonthlyPriceRmb, getTotalMonthlyPriceRmb } from '../shared/pricing'
+
+function timeAgo(timestamp?: number): string {
+    if (!timestamp) return '尚未整体刷新'
+    const diff = Date.now() - timestamp
+    const seconds = Math.floor(diff / 1000)
+    if (seconds < 60) return '刚刚整体刷新'
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes} 分钟前整体刷新`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours} 小时前整体刷新`
+    return `${Math.floor(hours / 24)} 天前整体刷新`
+}
 
 export default function App() {
-    const { platforms, loading } = usePlatforms()
+    const { platforms, loading, settings } = usePlatforms()
     const [refreshing, setRefreshing] = useState(false)
+    const totalMonthlyPriceRmb = getTotalMonthlyPriceRmb(platforms)
+    const titleSuffix = totalMonthlyPriceRmb > 0 ? ` · ${formatMonthlyPriceRmb(totalMonthlyPriceRmb)}` : ''
 
     const handleRefreshAll = async () => {
         setRefreshing(true)
@@ -16,8 +32,13 @@ export default function App() {
         }
     }
 
-    const handleOpenSidebar = () => {
-        void sendToBackground({ type: 'OPEN_SIDEPANEL' })
+    const handleOpenSidebar = async () => {
+        try {
+            await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT })
+            window.close()
+        } catch (error) {
+            console.error('[AI Monitor] Failed to open side panel:', error)
+        }
     }
 
     if (loading) {
@@ -32,8 +53,9 @@ export default function App() {
         <div className="w-[320px] bg-gray-50">
             {/* Header */}
             <div className="bg-white border-b border-gray-200 px-3 py-2.5 flex items-center justify-between">
-                <div>
-                    <h1 className="text-sm font-semibold text-gray-900">AI Monitor</h1>
+                <div className="min-w-0">
+                    <h1 className="text-sm font-semibold text-gray-900">AI Monitor{titleSuffix}</h1>
+                    <p className="mt-0.5 truncate text-[11px] text-gray-400">{timeAgo(settings?.lastRefreshAllAt)}</p>
                 </div>
                 <button
                     onClick={handleRefreshAll}
@@ -64,7 +86,7 @@ export default function App() {
                         <p className="text-xs text-gray-400">打开侧边栏添加平台</p>
                     </div>
                 ) : (
-                    platforms.map((platform) => (
+                    sortPlatformsByBurdenDesc(platforms).map((platform) => (
                         <PlatformCard key={platform.id} platform={platform} compact />
                     ))
                 )}
@@ -75,7 +97,7 @@ export default function App() {
                     onClick={handleOpenSidebar}
                     className="w-full rounded-md bg-gray-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-800"
                 >
-                    打开侧边栏管理平台
+                    打开侧边栏
                 </button>
             </div>
         </div>

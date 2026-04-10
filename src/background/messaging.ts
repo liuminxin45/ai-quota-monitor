@@ -1,9 +1,9 @@
 import type { AppMessage, PlatformId } from '../shared/types'
 import { onMessage } from '../shared/messaging'
-import { getAppState, getPlatforms, setPlatforms, updatePlatform } from '../shared/storage'
+import { appendUsageSnapshot, getAppState, getPlatforms, setPlatforms, updatePlatform } from '../shared/storage'
 import { createDefaultPlatform, PLATFORM_CONFIGS } from '../shared/constants'
-import { refreshAllPlatforms, refreshPlatform, calculateStatus, computeBurdenScore } from './platformManager'
-import { openSidePanelForWindow } from './contextMenu'
+import { refreshAllPlatforms, refreshPlatform, calculateStatus } from './platformManager'
+import { computeBurdenScore } from '../shared/burden'
 
 export function setupMessageListener(): void {
     onMessage((message: AppMessage, _sender, sendResponse) => {
@@ -38,11 +38,6 @@ async function handleMessage(message: AppMessage): Promise<unknown> {
             return { success: true }
         }
 
-        case 'OPEN_SIDEPANEL': {
-            await openSidePanelForWindow()
-            return { success: true }
-        }
-
         case 'ADD_PLATFORM': {
             const platforms = await getPlatforms()
             const exists = platforms.find((p) => p.id === message.platformId)
@@ -66,14 +61,22 @@ async function handleMessage(message: AppMessage): Promise<unknown> {
             // Content script reporting usage data
             if (message.success && message.usage) {
                 const status = calculateStatus(message.usage.percentage)
-                const burdenScore = computeBurdenScore(message.platformId, message.usage)
+                const platforms = await getPlatforms()
+                const currentPlatform = platforms.find((platform) => platform.id === message.platformId)
+                const burdenScore = computeBurdenScore(
+                    message.platformId,
+                    message.usage,
+                    currentPlatform?.subscriptionStartedAt
+                )
+                const capturedAt = Date.now()
                 await updatePlatform(message.platformId, {
                     status,
                     usage: message.usage,
-                    lastUpdated: Date.now(),
+                    lastUpdated: capturedAt,
                     errorMessage: undefined,
                     burdenScore,
                 })
+                await appendUsageSnapshot(message.platformId, message.usage, burdenScore, capturedAt)
             } else {
                 await updatePlatform(message.platformId, {
                     status: message.error?.includes('login') ? 'not_login' : 'error',

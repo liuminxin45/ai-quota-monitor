@@ -14,25 +14,21 @@ function scrapeUsage(): { success: boolean; usage?: UsageData; error?: string } 
             return { success: false, error: 'Not logged in - login required' }
         }
 
-        // Calculate reset time — Copilot resets on the 9th of each month
+        // Calculate reset time — Copilot resets on the 1st of each month at UTC 00:00
         let resetTimestamp: number
         function getResetInfo(): { text: string; timestamp: number } {
             const now = new Date()
-            let resetDate: Date
-            if (now.getDate() < 9) {
-                resetDate = new Date(now.getFullYear(), now.getMonth(), 9)
-            } else {
-                resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 9)
-            }
-            const timestamp = resetDate.getTime()
+            const currentMonthReset = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0)
+            const nextMonthReset = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0)
+            const timestamp = now.getTime() < currentMonthReset ? currentMonthReset : nextMonthReset
             const diffMs = timestamp - now.getTime()
             const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
             const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
             let text: string
             if (diffDays > 0) {
-                text = `Resets in ${diffDays}d ${diffHours}h`
+                text = `Resets on 1st UTC in ${diffDays}d ${diffHours}h`
             } else {
-                text = `Resets in ${diffHours} hours`
+                text = `Resets on 1st UTC in ${diffHours} hours`
             }
             return { text, timestamp }
         }

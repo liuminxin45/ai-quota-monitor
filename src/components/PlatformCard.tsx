@@ -1,9 +1,15 @@
 import React, { useState } from 'react'
-import type { Platform } from '../shared/types'
+import type { Platform, PlatformId } from '../shared/types'
 import { StatusBadge } from './StatusBadge'
 import { ProgressBar } from './ProgressBar'
 import { sendToBackground } from '../shared/messaging'
-import { CYCLE_DAYS } from '../shared/constants'
+import { getCycleDurationMs } from '../shared/cycle'
+import { usePlatformHistory } from '../hooks/usePlatformHistory'
+import { buildQuotaTrendModel } from '../shared/quotaHistory'
+import { DepletionTimeline } from './DepletionTimeline'
+import { CopilotSubscriptionDialog } from './CopilotSubscriptionDialog'
+import { PlatformPriceDialog } from './PlatformPriceDialog'
+import { formatMonthlyPriceRmb, hasMonthlyPrice } from '../shared/pricing'
 
 interface PlatformCardProps {
     platform: Platform
@@ -33,6 +39,18 @@ function timeAgo(timestamp: number | null): string {
     const hours = Math.floor(minutes / 60)
     if (hours < 24) return `${hours} 小时前`
     return `${Math.floor(hours / 24)} 天前`
+}
+
+function getRefreshFootnote(platform: Platform): string {
+    if (platform.status === 'not_login') {
+        return platform.lastUpdated ? `需要登录，上次成功于${timeAgo(platform.lastUpdated)}` : '需要登录'
+    }
+
+    if (platform.status === 'error') {
+        return platform.lastUpdated ? `刷新失败，上次成功于${timeAgo(platform.lastUpdated)}` : '刷新失败'
+    }
+
+    return timeAgo(platform.lastUpdated)
 }
 
 // Burden score → display config
@@ -117,7 +135,7 @@ function getBurdenConfig(score: number): {
 }
 
 // Compute countdown info — cycle-aware so progress bar fills over the correct period
-function getResetCountdown(platformId: string, resetTimestamp?: number, resetTime?: string): {
+function getResetCountdown(platformId: PlatformId, resetTimestamp?: number, resetTime?: string): {
     text: string
     urgency: 'relaxed' | 'normal' | 'soon' | 'imminent'
     /** 0–1: fraction of cycle elapsed (0 = just reset, 1 = about to reset) */
@@ -131,8 +149,7 @@ function getResetCountdown(platformId: string, resetTimestamp?: number, resetTim
     const diffMs = resetTimestamp - now
     if (diffMs <= 0) return { text: '即将重置', urgency: 'imminent', progress: 1 }
 
-    const cycleDays = CYCLE_DAYS[platformId as keyof typeof CYCLE_DAYS] ?? 7
-    const cycleMs = cycleDays * 86_400_000
+    const cycleMs = getCycleDurationMs(platformId, resetTimestamp)
     const elapsedMs = cycleMs - diffMs
     const progress = Math.min(1, Math.max(0, elapsedMs / cycleMs))
 
@@ -158,14 +175,28 @@ function getResetCountdown(platformId: string, resetTimestamp?: number, resetTim
 }
 
 const urgencyConfig = {
-    relaxed: { bg: 'bg-emerald-50', text: 'text-emerald-600', bar: 'bg-emerald-400', icon: '🟢' },
-    normal: { bg: 'bg-blue-50', text: 'text-blue-600', bar: 'bg-blue-400', icon: '🔵' },
-    soon: { bg: 'bg-amber-50', text: 'text-amber-600', bar: 'bg-amber-400', icon: '🟡' },
-    imminent: { bg: 'bg-red-50', text: 'text-red-600', bar: 'bg-red-400', icon: '🔴' },
+    relaxed: { bg: 'bg-emerald-50', text: 'text-emerald-600', bar: 'bg-emerald-400', dot: 'bg-emerald-500' },
+    normal: { bg: 'bg-blue-50', text: 'text-blue-600', bar: 'bg-blue-400', dot: 'bg-blue-500' },
+    soon: { bg: 'bg-amber-50', text: 'text-amber-600', bar: 'bg-amber-400', dot: 'bg-amber-500' },
+    imminent: { bg: 'bg-red-50', text: 'text-red-600', bar: 'bg-red-400', dot: 'bg-red-500' },
 }
 
 export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
     const [refreshing, setRefreshing] = useState(false)
+    const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false)
+    const [showPriceDialog, setShowPriceDialog] = useState(false)
+    const historyEnabled = !compact && platform.status !== 'not_login' && platform.status !== 'error' && !!platform.usage
+    const { history: usageHistory, loading: historyLoading } = usePlatformHistory(platform.id, historyEnabled)
+    const trendModel = historyEnabled
+        ? buildQuotaTrendModel(
+            platform.id,
+            usageHistory,
+            platform.usage,
+            platform.lastUpdated,
+            platform.burdenScore,
+            platform.subscriptionStartedAt
+        )
+        : null
 
     const handleRefresh = async () => {
         setRefreshing(true)
@@ -193,8 +224,42 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                     >
                         {initials}
                     </div>
-                    <div>
-                        <div className="text-sm font-medium text-gray-900">{platform.name}</div>
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <div className="text-sm font-medium text-gray-900">{platform.name}</div>
+                            {hasMonthlyPrice(platform.monthlyPriceRmb) ? (
+                                <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-100">
+                                    {formatMonthlyPriceRmb(platform.monthlyPriceRmb)}
+                                </span>
+                            ) : null}
+                            {!compact ? (
+                                <button
+                                    onClick={() => setShowPriceDialog(true)}
+                                    aria-label={`设置 ${platform.name} 月费`}
+                                    title="设置月费"
+                                    className={`rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 ${hasMonthlyPrice(platform.monthlyPriceRmb) ? 'text-amber-600 hover:text-amber-700' : ''}`}
+                                >
+                                    <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth="1.8">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 2.75v14.5M6.5 6.5h4.25a2.25 2.25 0 010 4.5H9.25a2.25 2.25 0 100 4.5h4.25" />
+                                    </svg>
+                                </button>
+                            ) : null}
+                            {!compact && platform.id === 'github-copilot' ? (
+                                <button
+                                    onClick={() => setShowSubscriptionDialog(true)}
+                                    aria-label="设置 Copilot 首次订阅时间"
+                                    title="设置首次订阅时间"
+                                    className={`rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 ${platform.subscriptionStartedAt ? 'text-sky-600 hover:text-sky-700' : ''}`}
+                                >
+                                    <svg viewBox="0 0 20 20" fill="none" className="h-3.5 w-3.5" stroke="currentColor" strokeWidth="1.8">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 2.75v2.5M13.5 2.75v2.5M3.75 6h12.5M5.5 4.5h9a1.75 1.75 0 011.75 1.75v8.25A1.75 1.75 0 0114.5 16.25h-9A1.75 1.75 0 013.75 14.5V6.25A1.75 1.75 0 015.5 4.5z" />
+                                    </svg>
+                                </button>
+                            ) : null}
+                        </div>
+                        {!compact && platform.id === 'github-copilot' && platform.subscriptionStartedAt ? (
+                            <div className="text-[11px] text-sky-600">已设置首次订阅时间</div>
+                        ) : null}
                     </div>
                 </div>
                 {/* Burden badge when we have data; fall back to status badge for errors/not-login */}
@@ -260,7 +325,7 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                         const cfg = urgencyConfig[countdown.urgency]
                         return (
                             <div className={`flex items-center gap-2 mt-1.5 px-2 py-1 rounded-md ${cfg.bg}`}>
-                                <span className="text-xs leading-none">{cfg.icon}</span>
+                                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ring-2 ring-white/70 ${cfg.dot}`} />
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between">
                                         <span className={`text-xs font-medium ${cfg.text}`}>{countdown.text}</span>
@@ -275,13 +340,34 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                             </div>
                         )
                     })()}
+                    {!compact && trendModel ? (
+                        <div className="mt-2 rounded-lg border border-gray-100 bg-gradient-to-b from-slate-50 via-white to-white p-2.5">
+                            <div className="mb-1 flex items-center justify-between gap-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">
+                                    耗尽预测
+                                </p>
+                                <span className="text-[11px] text-gray-400">按当前周期平均消耗估算</span>
+                            </div>
+                            <DepletionTimeline model={trendModel} />
+                        </div>
+                    ) : null}
+                    {!compact && historyLoading ? (
+                        <div className="mt-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
+                            <p className="text-xs text-gray-500">正在整理这轮周期的历史记录与预测依据...</p>
+                        </div>
+                    ) : null}
+                    {!compact && !trendModel && !historyLoading ? (
+                        <div className="mt-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
+                            <p className="text-xs text-gray-500">再刷新几次后，这里会开始显示这轮周期的耗尽跑道。</p>
+                        </div>
+                    ) : null}
                 </div>
             ) : null}
 
             {/* Footer */}
             {!compact && (
                 <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-100">
-                    <span className="text-xs text-gray-400">{timeAgo(platform.lastUpdated)}</span>
+                    <span className="text-xs text-gray-400">{getRefreshFootnote(platform)}</span>
                     <button
                         onClick={handleRefresh}
                         disabled={refreshing}
@@ -304,6 +390,20 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                     </button>
                 </div>
             )}
+
+            {!compact && showSubscriptionDialog && platform.id === 'github-copilot' ? (
+                <CopilotSubscriptionDialog
+                    currentValue={platform.subscriptionStartedAt}
+                    onClose={() => setShowSubscriptionDialog(false)}
+                />
+            ) : null}
+
+            {!compact && showPriceDialog ? (
+                <PlatformPriceDialog
+                    platform={platform}
+                    onClose={() => setShowPriceDialog(false)}
+                />
+            ) : null}
         </div>
     )
 }

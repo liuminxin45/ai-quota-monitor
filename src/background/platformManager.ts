@@ -1,45 +1,13 @@
 import type { PlatformId, PlatformStatus, UsageData } from '../shared/types'
-import { getPlatforms, updatePlatform } from '../shared/storage'
-import { STATUS_THRESHOLDS, REFRESH_DELAY_MS, PLATFORM_CONFIGS, CYCLE_DAYS } from '../shared/constants'
+import { appendUsageSnapshot, getPlatforms, markRefreshAllCompleted, updatePlatform } from '../shared/storage'
+import { STATUS_THRESHOLDS, REFRESH_DELAY_MS, PLATFORM_CONFIGS } from '../shared/constants'
+import { computeBurdenScore } from '../shared/burden'
 
 // Calculate status from usage percentage
 export function calculateStatus(percentage: number): PlatformStatus {
     if (percentage >= STATUS_THRESHOLDS.DANGER) return 'danger'
     if (percentage >= STATUS_THRESHOLDS.WARNING) return 'warning'
     return 'ok'
-}
-
-/**
- * Compute burden score = projected usage % at end of reset cycle.
- *
- * Interpretation: < 100 = will stay within quota; > 100 = will run out at this rate.
- *
- * If less than 10% of the cycle has elapsed, the burn rate is too noisy to project —
- * we simply return the current usage % directly (no amplification).
- *
- * Thresholds:  < 60 = 轻松 | 60-100 = 适中 | 100-150 = 偏重 | > 150 = 过载
- */
-export function computeBurdenScore(platformId: PlatformId, usage: UsageData): number {
-    const cycleDays = CYCLE_DAYS[platformId]
-    const now = Date.now()
-
-    let elapsedFraction: number
-    if (usage.resetTimestamp) {
-        const remainingMs = Math.max(0, usage.resetTimestamp - now)
-        const cycleMs = cycleDays * 86_400_000
-        elapsedFraction = Math.max(0, Math.min(1, 1 - remainingMs / cycleMs))
-    } else {
-        // No reset timestamp: use 0 so we fall through to the raw-usage path
-        elapsedFraction = 0
-    }
-
-    // Too early in the cycle — don't amplify noise; return current usage as-is
-    if (elapsedFraction < 0.10) {
-        return Math.round(usage.percentage)
-    }
-
-    // Projected end-of-cycle usage %= current% ÷ fraction elapsed
-    return Math.round(usage.percentage / elapsedFraction)
 }
 
 // Sleep helper for sequential refresh delay
@@ -75,8 +43,9 @@ function waitForUsageResult(platformId: PlatformId, timeoutMs: number): Promise<
             if (message.type === 'USAGE_RESULT' && message.platformId === platformId) {
                 clearTimeout(timer)
                 chrome.runtime.onMessage.removeListener(listener)
-                // The message handler in messaging.ts will process the data
-                resolve(true)
+                // The message handler in messaging.ts processes the data.
+                // Only treat the wait as successful when fresh usage was actually scraped.
+                resolve(message.success === true)
             }
         }
 
@@ -149,14 +118,18 @@ export async function refreshPlatform(platformId: PlatformId): Promise<void> {
                 if (response && response.success && response.usage) {
                     const usage: UsageData = response.usage
                     const status = calculateStatus(usage.percentage)
-                    const burdenScore = computeBurdenScore(platformId, usage)
+                    const platforms = await getPlatforms()
+                    const currentPlatform = platforms.find((platform) => platform.id === platformId)
+                    const burdenScore = computeBurdenScore(platformId, usage, currentPlatform?.subscriptionStartedAt)
+                    const capturedAt = Date.now()
                     await updatePlatform(platformId, {
                         status,
                         usage,
-                        lastUpdated: Date.now(),
+                        lastUpdated: capturedAt,
                         errorMessage: undefined,
                         burdenScore,
                     })
+                    await appendUsageSnapshot(platformId, usage, burdenScore, capturedAt)
                     return
                 }
 
@@ -183,13 +156,21 @@ export async function refreshPlatform(platformId: PlatformId): Promise<void> {
         const success = await scrapeViaBackgroundTab(platformId)
 
         if (!success) {
-            // Background tab didn't produce data
+            // Background tab didn't produce fresh usage data.
             const platforms = await getPlatforms()
             const platform = platforms.find((p) => p.id === platformId)
             if (platform && platform.lastUpdated === null) {
-                await updatePlatform(platformId, { status: 'not_login' })
+                await updatePlatform(platformId, {
+                    status: 'not_login',
+                    errorMessage: '本次刷新失败，未获取到最新数据',
+                })
+            } else {
+                await updatePlatform(platformId, {
+                    status: 'error',
+                    errorMessage: '本次刷新失败，沿用上次成功数据',
+                })
             }
-            // If we have old data, don't overwrite — just log
+            // Preserve the previous lastUpdated timestamp on failure.
             console.log(`[AI Monitor] Background scrape for ${platformId} did not return data`)
         }
     } catch (err) {
@@ -210,4 +191,6 @@ export async function refreshAllPlatforms(): Promise<void> {
             await sleep(REFRESH_DELAY_MS)
         }
     }
+
+    await markRefreshAllCompleted()
 }

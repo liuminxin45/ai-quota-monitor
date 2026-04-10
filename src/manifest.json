@@ -24,6 +24,10 @@
         "https://chatgpt.com/*",
         "https://www.kimi.com/*"
     ],
+    "optional_host_permissions": [
+        "https://*/*",
+        "http://*/*"
+    ],
     "background": {
         "service_worker": "src/background/index.ts",
         "type": "module"
