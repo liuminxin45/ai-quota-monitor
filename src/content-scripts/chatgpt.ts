@@ -5,6 +5,36 @@ import type { UsageData, ScrapeUsageMessage } from '../shared/types'
 
 console.log('[AI Monitor] ChatGPT/Codex content script loaded')
 
+function parseResetInfo(sourceText?: string): { resetTime?: string; resetTimestamp?: number } {
+    if (!sourceText) {
+        return {}
+    }
+
+    const normalizedText = sourceText.replace(/\s+/g, ' ').trim()
+
+    const resetCnMatch = normalizedText.match(/重置时间[：:]\s*(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})/)
+    if (resetCnMatch) {
+        const [, year, month, day, hour, minute] = resetCnMatch
+        const resetDate = new Date(+year, +month - 1, +day, +hour, +minute)
+        return {
+            resetTimestamp: resetDate.getTime(),
+            resetTime: `${year}年${month}月${day}日 ${hour}:${minute}`,
+        }
+    }
+
+    const resetRawMatch = normalizedText.match(/重置时间[：:]\s*([^•]+?)(?=$|•|·)/)
+    if (resetRawMatch) {
+        return { resetTime: resetRawMatch[1].trim() }
+    }
+
+    const resetEnMatch = normalizedText.match(/Resets?\s+(?:on|in|at)\s+([^•]+?)(?=$|•|·)/i)
+    if (resetEnMatch) {
+        return { resetTime: resetEnMatch[0].trim() }
+    }
+
+    return {}
+}
+
 function scrapeUsage(): { success: boolean; usage?: UsageData; error?: string } {
     try {
         // Check if user is logged in — ChatGPT redirects to login or shows auth UI
@@ -13,30 +43,7 @@ function scrapeUsage(): { success: boolean; usage?: UsageData; error?: string } 
             return { success: false, error: 'Not logged in - login required' }
         }
 
-        // Extract reset time from page text and parse to timestamp
-        let resetTime: string | undefined
-        let resetTimestamp: number | undefined
         const allText = document.body.innerText
-        // Chinese: "重置时间：2026年4月15日 9:09"
-        const resetCnMatch = allText.match(/重置时间[：:]\s*(\d{4})年(\d{1,2})月(\d{1,2})日\s*(\d{1,2}):(\d{2})/)
-        if (resetCnMatch) {
-            const [, year, month, day, hour, minute] = resetCnMatch
-            const resetDate = new Date(+year, +month - 1, +day, +hour, +minute)
-            resetTimestamp = resetDate.getTime()
-            resetTime = resetCnMatch[0].replace(/重置时间[：:]\s*/, '').trim()
-        } else {
-            // Fallback: raw text
-            const resetRawMatch = allText.match(/重置时间[：:]\s*(.+?)(?:\n|$)/)
-            if (resetRawMatch) {
-                resetTime = resetRawMatch[1].trim()
-            } else {
-                // English: "Resets on ..." / "Resets in ..."
-                const resetEnMatch = allText.match(/Resets?\s+(?:on|in|at)\s+(.+?)(?:\n|$)/i)
-                if (resetEnMatch) {
-                    resetTime = resetEnMatch[0].trim()
-                }
-            }
-        }
 
         // Strategy 1: Find the "每周使用限额" (weekly usage) article card specifically
         // The page has multiple cards (5小时, 每周, 代码审查, 剩余额度) — we want the weekly one
@@ -57,6 +64,9 @@ function scrapeUsage(): { success: boolean; usage?: UsageData; error?: string } 
 
         const targetArticle = weeklyArticle ?? fallbackArticle
         if (targetArticle) {
+            const { resetTime, resetTimestamp } = parseResetInfo(
+                (targetArticle as HTMLElement).innerText || targetArticle.textContent || undefined,
+            )
             const percentSpan = targetArticle.querySelector('span.text-2xl')
             const percentText = percentSpan?.textContent?.trim() ?? ''
             const percentMatch = percentText.match(/^(\d+(?:\.\d+)?)%$/)
@@ -100,6 +110,9 @@ function scrapeUsage(): { success: boolean; usage?: UsageData; error?: string } 
         if (weeklyMatch) {
             const remaining = parseFloat(weeklyMatch[1])
             const usedPercent = 100 - remaining
+            const { resetTime, resetTimestamp } = parseResetInfo(
+                weeklyMatch[0] || allText.match(/(?:每周使用限额|weekly\s+usage)[\s\S]{0,200}/i)?.[0],
+            )
             return {
                 success: true,
                 usage: {
