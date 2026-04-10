@@ -88,6 +88,22 @@ npm run compile
 npm run build
 ```
 
+构建发布产物（包含 `.crx` 和 `.zip`）：
+
+```bash
+npm run build:release
+```
+
+如果希望生成稳定可复用扩展 ID 的 `.crx`，需要提供 PEM 私钥：
+
+```bash
+# PowerShell
+$env:CRX_PRIVATE_KEY = Get-Content .\extension.pem -Raw
+npm run build:release
+```
+
+产物会输出到 `release/` 目录。
+
 ## 在 Edge 中加载
 
 1. 运行 `npm run build`
@@ -95,6 +111,22 @@ npm run build
 3. 开启“开发人员模式”
 4. 点击“加载解压缩的扩展”
 5. 选择生成出来的 `dist/` 目录
+
+## GitHub Actions 自动发布
+
+仓库已包含 `.github/workflows/release-crx.yml`：
+
+- 当 `main` 或 `master` 有新 push 时，自动执行构建
+- 自动生成 `release/*.crx` 和 `release/*.zip`
+- 自动更新一个固定 tag 为 `latest` 的 GitHub Release
+
+为了让每次发布出来的 `.crx` 保持同一个扩展 ID，请在仓库 Secrets 中配置：
+
+- `CRX_PRIVATE_KEY`：扩展签名用 PEM 私钥全文
+
+如果不配置这个 secret，打包工具仍可能生成 `.crx`，但每次构建得到的签名身份可能变化，不适合稳定分发或升级。
+
+另外要注意，Chrome/Edge 对本地 `.crx` 安装本身有限制。最稳妥的开发安装方式仍然是加载解压后的 `dist/`；`.crx` 更适合做发布产物或企业内部分发。
 
 ## 权限说明
 
