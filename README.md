@@ -88,17 +88,9 @@ npm run compile
 npm run build
 ```
 
-构建发布产物（包含 `.crx` 和 `.zip`）：
+构建发布产物（`.zip`）：
 
 ```bash
-npm run build:release
-```
-
-如果希望生成稳定可复用扩展 ID 的 `.crx`，需要提供 PEM 私钥：
-
-```bash
-# PowerShell
-$env:CRX_PRIVATE_KEY = Get-Content .\extension.pem -Raw
 npm run build:release
 ```
 
@@ -117,16 +109,10 @@ npm run build:release
 仓库已包含 `.github/workflows/release-crx.yml`：
 
 - 当 `main` 或 `master` 有新 push 时，自动执行构建
-- 自动生成 `release/*.crx` 和 `release/*.zip`
+- 自动生成 `release/*.zip`
 - 自动更新一个固定 tag 为 `latest` 的 GitHub Release
 
-为了让每次发布出来的 `.crx` 保持同一个扩展 ID，请在仓库 Secrets 中配置：
-
-- `CRX_PRIVATE_KEY`：扩展签名用 PEM 私钥全文
-
-如果不配置这个 secret，打包工具仍可能生成 `.crx`，但每次构建得到的签名身份可能变化，不适合稳定分发或升级。
-
-另外要注意，Chrome/Edge 对本地 `.crx` 安装本身有限制。最稳妥的开发安装方式仍然是加载解压后的 `dist/`；`.crx` 更适合做发布产物或企业内部分发。
+由于 Chrome/Edge 对非商店 `.crx` 安装有限制，当前 release 仅发布 `zip`。本地安装时，请解压后在扩展管理页加载解压目录，或直接使用仓库本地构建出来的 `dist/`。
 
 ## 权限说明
 
