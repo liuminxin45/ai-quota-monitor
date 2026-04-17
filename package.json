@@ -4,12 +4,21 @@
   "description": "AI 工具用量聚合监控浏览器扩展",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "build:release": "npm run build && node scripts/package-zip.mjs",
     "compile": "tsc --noEmit",
-    "watch": "tsc --noEmit --watch"
+    "watch": "tsc --noEmit --watch",
+    "build:all": "npm run build && npm run tray:build",
+    "build:all:release": "npm run build && npm run tray:build:release",
+    "tray:build": "cargo build --manifest-path desktop-tray/Cargo.toml",
+    "tray:build:release": "cargo build --release --manifest-path desktop-tray/Cargo.toml",
+    "tray:run": "cargo run --manifest-path desktop-tray/Cargo.toml",
+    "dev:desktop": "npm run tray:run"
   },
   "dependencies": {
     "react": "^19.2.5",

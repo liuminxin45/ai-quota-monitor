@@ -2,6 +2,7 @@ import { initializeStorage } from '../shared/storage'
 import { ensureAlarmConfigured, initAlarm, setupAlarmListener } from './alarm'
 import { setupContextMenu, setupContextMenuListener } from './contextMenu'
 import { setupMessageListener } from './messaging'
+import { setupTrayBridge } from './trayBridge'
 
 // Extension installed or updated
 chrome.runtime.onInstalled.addListener(async () => {
@@ -29,6 +30,7 @@ chrome.runtime.onStartup.addListener(async () => {
 setupAlarmListener()
 setupMessageListener()
 setupContextMenuListener()
+setupTrayBridge()
 
 void (async () => {
     await initializeStorage()

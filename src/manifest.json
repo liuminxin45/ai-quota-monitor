@@ -22,7 +22,9 @@
         "https://github.com/*",
         "https://platform.openai.com/*",
         "https://chatgpt.com/*",
-        "https://www.kimi.com/*"
+        "https://www.kimi.com/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
     ],
     "optional_host_permissions": [
         "https://*/*",

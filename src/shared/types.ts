@@ -77,6 +77,27 @@ export interface AppState {
     platforms: Platform[]
 }
 
+export interface TrayPlatformSnapshot {
+    id: PlatformId
+    name: string
+    enabled: boolean
+    status: PlatformStatus
+    remainingPercentage: number | null
+    usedPercentage: number | null
+    lastUpdated: number | null
+    errorMessage?: string
+}
+
+export interface TrayQuotaUpdatePayload {
+    platforms: TrayPlatformSnapshot[]
+    generatedAt: number
+}
+
+export interface TrayBridgeResponse {
+    ok: boolean
+    error?: string
+}
+
 // --- Messages ---
 
 export type MessageType =

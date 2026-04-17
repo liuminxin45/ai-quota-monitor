@@ -14,6 +14,9 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
 
 // Delay between sequential platform refreshes (ms)
 export const REFRESH_DELAY_MS = 2000
+export const TRAY_BRIDGE_PORT = 38431
+export const TRAY_BRIDGE_ENDPOINT = `http://127.0.0.1:${TRAY_BRIDGE_PORT}/api/quota-update`
+export const TRAY_BRIDGE_SYNC_DEBOUNCE_MS = 500
 
 // Platform definitions
 export const PLATFORM_CONFIGS: Record<PlatformId, Omit<Platform, 'status' | 'usage' | 'lastUpdated' | 'enabled'>> = {

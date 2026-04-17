@@ -23,6 +23,55 @@
                 "reveal": "silent"
             },
             "group": "build"
+        },
+        {
+            "label": "Build Extension",
+            "type": "npm",
+            "script": "build",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Build Tray (Debug)",
+            "type": "shell",
+            "command": "cargo build --manifest-path desktop-tray/Cargo.toml",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Build Tray (Release)",
+            "type": "shell",
+            "command": "cargo build --release --manifest-path desktop-tray/Cargo.toml",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
+        },
+        {
+            "label": "Run Tray",
+            "type": "shell",
+            "command": "cargo run --manifest-path desktop-tray/Cargo.toml",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            }
+        },
+        {
+            "label": "Build All",
+            "type": "npm",
+            "script": "build:all",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always"
+            },
+            "group": "build"
         }
     ]
 }
