@@ -1,6 +1,9 @@
 # AI Monitor
 
-![AI Monitor screenshot](https://raw.githubusercontent.com/liuminxin45/ai-quota-monitor/main/public/assets/readme/github-readme-example.png)
+<p align="center">
+  <img src="./public/assets/readme/github-readme-example.png" alt="AI Monitor screenshot" width="49%" />
+  <img src="./public/assets/readme/github-social-preview.png" alt="AI Monitor project image" width="49%" />
+</p>
 
 AI Monitor 是一个面向 Edge 浏览器开发的 AI 配额监控工具。当前仓库同时包含：
 
