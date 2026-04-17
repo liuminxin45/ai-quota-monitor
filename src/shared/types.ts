@@ -67,7 +67,7 @@ export interface Platform {
 // Global settings
 export interface GlobalSettings {
     autoRefresh: boolean
-    refreshInterval: number // seconds, default 60
+    refreshInterval: number // seconds
     lastRefreshAllAt?: number
 }
 
@@ -105,6 +105,7 @@ export type MessageType =
     | 'USAGE_RESULT'
     | 'REFRESH_ALL'
     | 'REFRESH_ONE'
+    | 'UPDATE_SETTINGS'
     | 'OPEN_LOGIN'
     | 'GET_STATE'
     | 'STATE_UPDATED'
@@ -137,6 +138,12 @@ export interface RefreshOneMessage extends BaseMessage {
     platformId: PlatformId
 }
 
+export interface UpdateSettingsMessage extends BaseMessage {
+    type: 'UPDATE_SETTINGS'
+    settings: Partial<GlobalSettings>
+    refreshNow?: boolean
+}
+
 export interface OpenLoginMessage extends BaseMessage {
     type: 'OPEN_LOGIN'
     platformId: PlatformId
@@ -161,6 +168,7 @@ export type AppMessage =
     | UsageResultMessage
     | RefreshAllMessage
     | RefreshOneMessage
+    | UpdateSettingsMessage
     | OpenLoginMessage
     | GetStateMessage
     | AddPlatformMessage

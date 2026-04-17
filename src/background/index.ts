@@ -1,5 +1,5 @@
 import { initializeStorage } from '../shared/storage'
-import { ensureAlarmConfigured, initAlarm, setupAlarmListener } from './alarm'
+import { ensureAlarmConfigured, initAlarm, refreshIfOverdue, setupAlarmListener } from './alarm'
 import { setupContextMenu, setupContextMenuListener } from './contextMenu'
 import { setupMessageListener } from './messaging'
 import { setupTrayBridge } from './trayBridge'
@@ -35,6 +35,7 @@ setupTrayBridge()
 void (async () => {
     await initializeStorage()
     await ensureAlarmConfigured()
+    await refreshIfOverdue()
 })()
 
 console.log('[AI Monitor] Background service worker loaded')

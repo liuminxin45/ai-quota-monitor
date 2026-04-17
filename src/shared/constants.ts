@@ -11,6 +11,8 @@ export const DEFAULT_SETTINGS: GlobalSettings = {
     autoRefresh: true,
     refreshInterval: 1800,
 }
+export const MIN_REFRESH_INTERVAL_SECONDS = 5 * 60
+export const MAX_REFRESH_INTERVAL_SECONDS = 12 * 60 * 60
 
 // Delay between sequential platform refreshes (ms)
 export const REFRESH_DELAY_MS = 2000

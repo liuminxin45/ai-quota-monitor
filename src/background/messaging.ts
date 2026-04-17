@@ -1,9 +1,14 @@
 import type { AppMessage, PlatformId } from '../shared/types'
 import { onMessage } from '../shared/messaging'
-import { appendUsageSnapshot, getAppState, getPlatforms, setPlatforms, updatePlatform } from '../shared/storage'
-import { createDefaultPlatform, PLATFORM_CONFIGS } from '../shared/constants'
+import { appendUsageSnapshot, getAppState, getPlatforms, setPlatforms, updatePlatform, updateSettings } from '../shared/storage'
+import { createDefaultPlatform, MAX_REFRESH_INTERVAL_SECONDS, MIN_REFRESH_INTERVAL_SECONDS, PLATFORM_CONFIGS } from '../shared/constants'
 import { refreshAllPlatforms, refreshPlatform, calculateStatus } from './platformManager'
 import { computeBurdenScore } from '../shared/burden'
+import { updateAlarm } from './alarm'
+
+function clampRefreshIntervalSeconds(value: number): number {
+    return Math.min(Math.max(value, MIN_REFRESH_INTERVAL_SECONDS), MAX_REFRESH_INTERVAL_SECONDS)
+}
 
 export function setupMessageListener(): void {
     onMessage((message: AppMessage, _sender, sendResponse) => {
@@ -29,6 +34,19 @@ async function handleMessage(message: AppMessage): Promise<unknown> {
         case 'REFRESH_ONE':
             await refreshPlatform(message.platformId)
             return { success: true }
+
+        case 'UPDATE_SETTINGS': {
+            const nextSettings = { ...message.settings }
+            if (typeof nextSettings.refreshInterval === 'number') {
+                nextSettings.refreshInterval = clampRefreshIntervalSeconds(nextSettings.refreshInterval)
+            }
+            await updateSettings(nextSettings)
+            await updateAlarm()
+            if (message.refreshNow) {
+                await refreshAllPlatforms()
+            }
+            return { success: true, state: await getAppState() }
+        }
 
         case 'OPEN_LOGIN': {
             const config = PLATFORM_CONFIGS[message.platformId]

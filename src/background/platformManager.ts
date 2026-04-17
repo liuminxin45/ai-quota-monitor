@@ -3,6 +3,8 @@ import { appendUsageSnapshot, getPlatforms, markRefreshAllCompleted, updatePlatf
 import { STATUS_THRESHOLDS, REFRESH_DELAY_MS, PLATFORM_CONFIGS } from '../shared/constants'
 import { computeBurdenScore } from '../shared/burden'
 
+let refreshAllInFlight: Promise<void> | null = null
+
 // Calculate status from usage percentage
 export function calculateStatus(percentage: number): PlatformStatus {
     if (percentage >= STATUS_THRESHOLDS.DANGER) return 'danger'
@@ -181,16 +183,28 @@ export async function refreshPlatform(platformId: PlatformId): Promise<void> {
 
 // Refresh all enabled platforms sequentially with delay
 export async function refreshAllPlatforms(): Promise<void> {
-    const platforms = await getPlatforms()
-    const enabled = platforms.filter((p) => p.enabled)
-
-    for (let i = 0; i < enabled.length; i++) {
-        await refreshPlatform(enabled[i].id)
-        // Delay between platforms (skip after last one)
-        if (i < enabled.length - 1) {
-            await sleep(REFRESH_DELAY_MS)
-        }
+    if (refreshAllInFlight) {
+        await refreshAllInFlight
+        return
     }
 
-    await markRefreshAllCompleted()
+    refreshAllInFlight = (async () => {
+        const platforms = await getPlatforms()
+        const enabled = platforms.filter((p) => p.enabled)
+
+        for (let i = 0; i < enabled.length; i++) {
+            await refreshPlatform(enabled[i].id)
+            if (i < enabled.length - 1) {
+                await sleep(REFRESH_DELAY_MS)
+            }
+        }
+
+        await markRefreshAllCompleted()
+    })()
+
+    try {
+        await refreshAllInFlight
+    } finally {
+        refreshAllInFlight = null
+    }
 }

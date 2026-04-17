@@ -168,7 +168,7 @@ export async function initializeStorage(): Promise<void> {
     // Merge stored settings with current defaults so updated defaults always win
     const stored = await chrome.storage.local.get(STORAGE_KEY_SETTINGS)
     const existingSettings = (stored[STORAGE_KEY_SETTINGS] as Partial<GlobalSettings> | undefined) ?? {}
-    await setSettings({ ...DEFAULT_SETTINGS, ...existingSettings, refreshInterval: DEFAULT_SETTINGS.refreshInterval })
+    await setSettings({ ...DEFAULT_SETTINGS, ...existingSettings })
 }
 
 // Listen for storage changes
