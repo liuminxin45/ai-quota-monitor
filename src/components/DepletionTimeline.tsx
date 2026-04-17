@@ -8,9 +8,9 @@ interface DepletionTimelineProps {
 const TIMELINE_WIDTH = 100
 
 function formatRatePerDay(value: number): string {
-    if (value <= 0) return '0% / 天'
-    if (value < 0.1) return '<0.1% / 天'
-    return `${value.toFixed(1)}% / 天`
+    if (value <= 0) return '0% / 工作日'
+    if (value < 0.1) return '<0.1% / 工作日'
+    return `${value.toFixed(1)}% / 工作日`
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -73,7 +73,7 @@ export function DepletionTimeline({ model }: DepletionTimelineProps) {
                     </p>
                 </div>
                 <div className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 shadow-sm ring-1 ring-slate-100">
-                    周期均速 {rateText}
+                    工作时段均速 {rateText}
                 </div>
             </div>
 

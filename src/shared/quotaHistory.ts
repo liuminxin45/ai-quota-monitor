@@ -1,6 +1,7 @@
 import { CYCLE_DAYS } from './constants'
 import { getCycleDurationMs, getCycleStartTimestamp, getEffectiveUsageStartTimestamp } from './cycle'
 import type { PlatformId, QuotaTrendModel, QuotaTrendPoint, UsageData, UsageSnapshot } from './types'
+import { addWorkingDuration, getWorkingDayDurationMs, getWorkingDurationBetween } from './workingTime'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const HOUR_MS = 60 * 60 * 1000
@@ -56,7 +57,7 @@ function calculateRegressionSlope(points: QuotaTrendPoint[]): number {
     let sumXX = 0
 
     for (const point of points) {
-        const x = point.timestamp - firstTimestamp
+        const x = getWorkingDurationBetween(firstTimestamp, point.timestamp)
         const y = point.usagePercentage
         sumX += x
         sumY += y
@@ -89,7 +90,12 @@ function calculateCycleAverageSlope(
         return 0
     }
 
-    return latestPoint.usagePercentage / elapsedMs
+    const workingElapsedMs = getWorkingDurationBetween(usageStartTimestamp, latestPoint.timestamp)
+    if (workingElapsedMs <= 0) {
+        return 0
+    }
+
+    return latestPoint.usagePercentage / workingElapsedMs
 }
 
 function filterCurrentCycle(platformId: PlatformId, history: UsageSnapshot[]): UsageSnapshot[] {
@@ -169,7 +175,7 @@ export function buildQuotaTrendModel(
 
     if (trendWindow !== 'insufficient' && slope > 0) {
         const msToDeplete = ((100 - latestPoint.usagePercentage) / slope)
-        const depletionTimestamp = latestPoint.timestamp + msToDeplete
+        const depletionTimestamp = addWorkingDuration(latestPoint.timestamp, msToDeplete)
         if (Number.isFinite(depletionTimestamp)) {
             projectedDepletionTimestamp = depletionTimestamp
         }
@@ -182,7 +188,7 @@ export function buildQuotaTrendModel(
             projectedDepletionTimestamp && projectedDepletionTimestamp < latestResetTimestamp
                 ? projectedDepletionTimestamp
                 : latestResetTimestamp
-        const projectedUsageAtEnd = latestPoint.usagePercentage + slope * (endTimestamp - latestPoint.timestamp)
+        const projectedUsageAtEnd = latestPoint.usagePercentage + slope * getWorkingDurationBetween(latestPoint.timestamp, endTimestamp)
         const projectedRemainingAtEnd = Math.max(0, Math.min(100, 100 - projectedUsageAtEnd))
         projectedRemainingAtReset = projectedDepletionTimestamp && projectedDepletionTimestamp < latestResetTimestamp
             ? 0
@@ -207,7 +213,7 @@ export function buildQuotaTrendModel(
         resetTimestamp: latestResetTimestamp,
         projectedDepletionTimestamp,
         projectedRemainingAtReset,
-        projectedUsageRatePerDay: Math.max(0, slope * DAY_MS),
+        projectedUsageRatePerDay: Math.max(0, slope * getWorkingDayDurationMs()),
         projectedGapToResetMs,
         trendWindow,
     }

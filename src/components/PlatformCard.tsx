@@ -346,7 +346,7 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gray-500">
                                     耗尽预测
                                 </p>
-                                <span className="text-[11px] text-gray-400">按当前周期平均消耗估算</span>
+                                <span className="text-[11px] text-gray-400">按当前周期工作时段平均消耗估算</span>
                             </div>
                             <DepletionTimeline model={trendModel} />
                         </div>
