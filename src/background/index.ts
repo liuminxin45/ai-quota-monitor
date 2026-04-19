@@ -2,12 +2,14 @@ import { initializeStorage } from '../shared/storage'
 import { ensureAlarmConfigured, initAlarm, refreshIfOverdue, setupAlarmListener } from './alarm'
 import { setupContextMenu, setupContextMenuListener } from './contextMenu'
 import { setupMessageListener } from './messaging'
+import { cleanupOrphanedBackgroundTabs } from './platformManager'
 import { setupTrayBridge } from './trayBridge'
 
 // Extension installed or updated
 chrome.runtime.onInstalled.addListener(async () => {
     console.log('[AI Monitor] Extension installed/updated')
     await initializeStorage()
+    await cleanupOrphanedBackgroundTabs()
     await initAlarm()
     await setupContextMenu()
 
@@ -23,6 +25,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 // Service worker startup
 chrome.runtime.onStartup.addListener(async () => {
     console.log('[AI Monitor] Service worker started')
+    await cleanupOrphanedBackgroundTabs()
     await initAlarm()
 })
 
@@ -34,6 +37,7 @@ setupTrayBridge()
 
 void (async () => {
     await initializeStorage()
+    await cleanupOrphanedBackgroundTabs()
     await ensureAlarmConfigured()
     await refreshIfOverdue()
 })()

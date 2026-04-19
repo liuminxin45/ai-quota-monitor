@@ -4,6 +4,15 @@ import { STATUS_THRESHOLDS, REFRESH_DELAY_MS, PLATFORM_CONFIGS } from '../shared
 import { computeBurdenScore } from '../shared/burden'
 
 let refreshAllInFlight: Promise<void> | null = null
+const BACKGROUND_TAB_SESSION_KEY = 'backgroundRefreshTabs'
+const BACKGROUND_TAB_LOAD_TIMEOUT_MS = 15000
+const BACKGROUND_SCRAPE_TIMEOUT_MS = 20000
+
+type BackgroundRefreshTab = {
+    tabId: number
+    platformId: PlatformId
+    createdAt: number
+}
 
 // Calculate status from usage percentage
 export function calculateStatus(percentage: number): PlatformStatus {
@@ -15,6 +24,75 @@ export function calculateStatus(percentage: number): PlatformStatus {
 // Sleep helper for sequential refresh delay
 function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+async function getTrackedBackgroundTabs(): Promise<BackgroundRefreshTab[]> {
+    const stored = await chrome.storage.session.get(BACKGROUND_TAB_SESSION_KEY)
+    const tabs = stored[BACKGROUND_TAB_SESSION_KEY]
+    if (!Array.isArray(tabs)) return []
+
+    return tabs.filter((item): item is BackgroundRefreshTab => {
+        return (
+            typeof item === 'object'
+            && item !== null
+            && typeof item.tabId === 'number'
+            && typeof item.platformId === 'string'
+            && typeof item.createdAt === 'number'
+        )
+    })
+}
+
+async function setTrackedBackgroundTabs(tabs: BackgroundRefreshTab[]): Promise<void> {
+    await chrome.storage.session.set({ [BACKGROUND_TAB_SESSION_KEY]: tabs })
+}
+
+async function trackBackgroundTab(tabId: number, platformId: PlatformId): Promise<void> {
+    const tabs = await getTrackedBackgroundTabs()
+    tabs.push({ tabId, platformId, createdAt: Date.now() })
+    await setTrackedBackgroundTabs(tabs)
+}
+
+async function untrackBackgroundTab(tabId: number): Promise<void> {
+    const tabs = await getTrackedBackgroundTabs()
+    const nextTabs = tabs.filter((item) => item.tabId !== tabId)
+    if (nextTabs.length !== tabs.length) {
+        await setTrackedBackgroundTabs(nextTabs)
+    }
+}
+
+async function closeTrackedTab(tabId: number): Promise<void> {
+    try {
+        await chrome.tabs.remove(tabId)
+    } catch {
+        // Tab may already be gone.
+    } finally {
+        await untrackBackgroundTab(tabId)
+    }
+}
+
+export async function cleanupOrphanedBackgroundTabs(): Promise<void> {
+    const tabs = await getTrackedBackgroundTabs()
+    if (tabs.length === 0) return
+
+    const now = Date.now()
+    const remaining: BackgroundRefreshTab[] = []
+
+    for (const tab of tabs) {
+        try {
+            const existingTab = await chrome.tabs.get(tab.tabId)
+            const ageMs = now - tab.createdAt
+
+            if (!existingTab.id || ageMs > BACKGROUND_TAB_LOAD_TIMEOUT_MS + BACKGROUND_SCRAPE_TIMEOUT_MS + 10000) {
+                await chrome.tabs.remove(tab.tabId)
+            } else {
+                remaining.push(tab)
+            }
+        } catch {
+            // Tab no longer exists.
+        }
+    }
+
+    await setTrackedBackgroundTabs(remaining)
 }
 
 // Find tabs that match a platform's usage URL pattern
@@ -62,6 +140,8 @@ async function scrapeViaBackgroundTab(platformId: PlatformId): Promise<boolean> 
 
     let tab: chrome.tabs.Tab | undefined
     try {
+        await cleanupOrphanedBackgroundTabs()
+
         // Create tab without stealing focus — appears in tab strip but user stays on current tab
         tab = await chrome.tabs.create({
             url: config.usageUrl,
@@ -71,24 +151,30 @@ async function scrapeViaBackgroundTab(platformId: PlatformId): Promise<boolean> 
         if (!tab?.id) return false
 
         const tabId = tab.id
+        await trackBackgroundTab(tabId, platformId)
 
         // Wait for the tab to finish loading
         await new Promise<void>((resolve) => {
+            let settled = false
             function onUpdated(updatedTabId: number, changeInfo: { status?: string }) {
-                if (updatedTabId === tabId && changeInfo.status === 'complete') {
+                if (!settled && updatedTabId === tabId && changeInfo.status === 'complete') {
+                    settled = true
                     chrome.tabs.onUpdated.removeListener(onUpdated)
                     resolve()
                 }
             }
             chrome.tabs.onUpdated.addListener(onUpdated)
             setTimeout(() => {
-                chrome.tabs.onUpdated.removeListener(onUpdated)
-                resolve()
-            }, 15000)
+                if (!settled) {
+                    settled = true
+                    chrome.tabs.onUpdated.removeListener(onUpdated)
+                    resolve()
+                }
+            }, BACKGROUND_TAB_LOAD_TIMEOUT_MS)
         })
 
         // Wait for content script auto-scrape result (SPA may need extra time)
-        const received = await waitForUsageResult(platformId, 20000)
+        const received = await waitForUsageResult(platformId, BACKGROUND_SCRAPE_TIMEOUT_MS)
         return received
     } catch (err) {
         console.error(`[AI Monitor] Background tab scrape failed for ${platformId}:`, err)
@@ -96,7 +182,7 @@ async function scrapeViaBackgroundTab(platformId: PlatformId): Promise<boolean> 
     } finally {
         // Always close the background tab
         if (tab?.id) {
-            try { await chrome.tabs.remove(tab.id) } catch { /* already closed */ }
+            await closeTrackedTab(tab.id)
         }
     }
 }
@@ -104,6 +190,7 @@ async function scrapeViaBackgroundTab(platformId: PlatformId): Promise<boolean> 
 // Refresh a single platform by messaging its content script
 export async function refreshPlatform(platformId: PlatformId): Promise<void> {
     try {
+        await cleanupOrphanedBackgroundTabs()
         const tabs = await findPlatformTabs(platformId)
 
         if (tabs.length > 0) {
