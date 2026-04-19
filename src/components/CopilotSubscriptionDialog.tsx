@@ -42,14 +42,15 @@ export function CopilotSubscriptionDialog({ currentValue, onClose }: CopilotSubs
     }
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
-            <div className="mx-4 w-full max-w-sm rounded-xl bg-white p-4 shadow-xl" onClick={(event) => event.stopPropagation()}>
-                <h3 className="text-sm font-semibold text-gray-900">Copilot 首次订阅时间</h3>
-                <p className="mt-2 text-xs leading-5 text-gray-500">
+        <div className="modal-backdrop" onClick={onClose}>
+            <div className="modal-panel" onClick={(event) => event.stopPropagation()}>
+                <p className="app-kicker">Subscription</p>
+                <h3 className="mt-2 text-base font-semibold text-slate-900">Copilot 首次订阅时间</h3>
+                <p className="mt-2 text-sm leading-6 text-stone-500">
                     仅当首次订阅发生在当前自然月内时，这个时间才会参与用量速度计算。留空时，继续按默认算法估算。
                 </p>
 
-                <label className="mt-4 block text-xs font-medium text-gray-600" htmlFor="copilot-subscription-start">
+                <label className="mt-5 block text-xs font-medium uppercase tracking-[0.16em] text-stone-500" htmlFor="copilot-subscription-start">
                     首次订阅时间
                 </label>
                 <input
@@ -57,14 +58,14 @@ export function CopilotSubscriptionDialog({ currentValue, onClose }: CopilotSubs
                     type="datetime-local"
                     value={value}
                     onChange={(event) => setValue(event.target.value)}
-                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 outline-none transition-colors focus:border-slate-400"
+                    className="app-input mt-2"
                 />
 
-                <div className="mt-4 flex items-center justify-between gap-2">
+                <div className="mt-5 flex items-center justify-between gap-2">
                     <button
                         onClick={handleClear}
                         disabled={saving}
-                        className="rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+                        className="app-button-secondary px-3.5 py-2 text-xs"
                     >
                         清空
                     </button>
@@ -72,14 +73,14 @@ export function CopilotSubscriptionDialog({ currentValue, onClose }: CopilotSubs
                         <button
                             onClick={onClose}
                             disabled={saving}
-                            className="rounded-lg px-3 py-2 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50"
+                            className="app-button-secondary px-3.5 py-2 text-xs"
                         >
                             取消
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-slate-800 disabled:opacity-50"
+                            className="app-button-primary px-3.5 py-2 text-xs"
                         >
                             保存
                         </button>

@@ -60,13 +60,23 @@ function getSummary(model: QuotaTrendModel): { headline: string; detail: string;
 
 export function TrendSummary({ model, expanded = false }: TrendSummaryProps) {
     const summary = getSummary(model)
+    const showWarningBar = !!(
+        model.projectedDepletionTimestamp
+        && model.resetTimestamp
+        && model.projectedDepletionTimestamp < model.resetTimestamp
+    )
 
     return (
-        <div className="space-y-1.5">
-            <p className={`text-sm font-semibold ${summary.tone}`}>{summary.headline}</p>
-            <p className="text-xs leading-5 text-gray-500">{summary.detail}</p>
+        <div className={`space-y-1.5 ${showWarningBar ? 'rounded-[20px] border border-amber-100 bg-amber-50/70 px-3 py-3' : ''}`}>
+            <div className="flex items-start gap-3">
+                {showWarningBar ? <span className="mt-0.5 h-12 w-[4px] shrink-0 rounded-full bg-amber-500" /> : null}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                    <p className={`text-sm font-semibold ${summary.tone}`}>{summary.headline}</p>
+                    <p className="text-sm leading-6 text-stone-500">{summary.detail}</p>
+                </div>
+            </div>
             {expanded ? (
-                <div className="flex flex-wrap items-center gap-3 text-[11px] text-gray-400">
+                <div className="flex flex-wrap items-center gap-3 text-[11px] text-stone-400">
                     <span className="inline-flex items-center gap-1">
                         <span className="h-0.5 w-4 rounded-full bg-teal-700" />
                         实际余量

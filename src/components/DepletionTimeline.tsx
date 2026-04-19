@@ -65,31 +65,31 @@ export function DepletionTimeline({ model }: DepletionTimelineProps) {
     const remainingText = `${Math.max(0, Math.round(model.projectedRemainingAtReset ?? model.latestRemainingPercentage))}%`
 
     return (
-        <div className="overflow-hidden rounded-lg border border-slate-100 bg-slate-50/90 px-3 py-3">
+        <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white/80 px-3.5 py-3.5">
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                     <p className={`text-xs font-medium ${headlineTone}`}>
                         {depletesBeforeReset ? '这轮额度大概率会在重置前用完。' : '这轮额度能撑到重置。'}
                     </p>
                 </div>
-                <div className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 shadow-sm ring-1 ring-slate-100">
+                <div className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1 text-[11px] font-medium text-stone-500">
                     工作时段均速 {rateText}
                 </div>
             </div>
 
-            <div className="mt-2.5 flex items-center justify-between text-[11px] font-medium text-slate-500">
+            <div className="mt-2.5 flex items-center justify-between text-[11px] font-medium text-stone-500">
                 <span>现在</span>
                 <span>重置</span>
             </div>
 
             <div className="relative mt-2.5 h-14">
-                <div className="absolute left-0 right-0 top-5 h-2.5 rounded-full bg-slate-200" />
+                <div className="absolute left-0 right-0 top-5 h-2.5 rounded-full bg-stone-200" />
                 <div
                     className={`absolute left-0 top-5 h-2.5 rounded-full ${depletesBeforeReset ? 'bg-red-200' : 'bg-emerald-200'}`}
                     style={{ width: depletesBeforeReset && depletionOffset !== undefined ? `${depletionOffset}%` : '100%' }}
                 />
                 <div className="absolute left-0 top-3.5 h-5 w-5 rounded-full border-2 border-white bg-slate-700 shadow-sm" />
-                <div className="absolute right-0 top-3.5 h-5 w-5 rounded-full border-2 border-white bg-slate-400 shadow-sm" />
+                <div className="absolute right-0 top-3.5 h-5 w-5 rounded-full border-2 border-white bg-stone-400 shadow-sm" />
 
                 {depletionOffset !== undefined ? (
                     <div
@@ -106,25 +106,25 @@ export function DepletionTimeline({ model }: DepletionTimelineProps) {
 
             <div className="mt-2.5 space-y-1.5 text-xs">
                 <div className="flex items-start justify-between gap-3">
-                    <span className="text-slate-500">消耗节奏</span>
+                    <span className="text-stone-500">消耗节奏</span>
                     <span className="min-w-0 text-right font-medium text-slate-700">这轮周期平均约 {rateText}</span>
                 </div>
 
                 {depletesBeforeReset && model.projectedDepletionTimestamp ? (
                     <>
                         <div className="flex items-start justify-between gap-3">
-                            <span className="text-slate-500">预计用完</span>
+                            <span className="text-stone-500">预计用完</span>
                             <span className="min-w-0 text-right font-medium text-red-700">{formatShortDate(model.projectedDepletionTimestamp)}</span>
                         </div>
 
                         <div className="flex items-start justify-between gap-3">
-                            <span className="text-slate-500">和重置相比</span>
+                            <span className="text-stone-500">和重置相比</span>
                             <span className="min-w-0 text-right font-medium text-red-700">会早 {formatDuration(model.resetTimestamp - model.projectedDepletionTimestamp)}</span>
                         </div>
                     </>
                 ) : (
                     <div className="flex items-start justify-between gap-3">
-                        <span className="text-slate-500">到重置时</span>
+                        <span className="text-stone-500">到重置时</span>
                         <span className="min-w-0 text-right font-medium text-emerald-700">剩 {remainingText}</span>
                     </div>
                 )}

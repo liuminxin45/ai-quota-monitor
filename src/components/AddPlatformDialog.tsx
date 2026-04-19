@@ -18,13 +18,14 @@ export function AddPlatformDialog({ enabledIds, onClose }: AddPlatformDialogProp
 
     if (availablePlatforms.length === 0) {
         return (
-            <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
-                <div className="bg-white rounded-lg p-4 mx-4 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-2">添加平台</h3>
-                    <p className="text-sm text-gray-500">所有平台已添加</p>
+            <div className="modal-backdrop" onClick={onClose}>
+                <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+                    <p className="app-kicker">Platform</p>
+                    <h3 className="mt-2 text-base font-semibold text-slate-900">添加平台</h3>
+                    <p className="mt-2 text-sm leading-6 text-stone-500">当前可监控的平台都已经启用。</p>
                     <button
                         onClick={onClose}
-                        className="mt-3 w-full py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                        className="app-button-secondary mt-5 w-full"
                     >
                         关闭
                     </button>
@@ -34,32 +35,36 @@ export function AddPlatformDialog({ enabledIds, onClose }: AddPlatformDialogProp
     }
 
     return (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
-            <div className="bg-white rounded-lg p-4 mx-4 max-w-sm w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3">添加平台</h3>
-                <div className="space-y-2">
+        <div className="modal-backdrop" onClick={onClose}>
+            <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+                <p className="app-kicker">Platform</p>
+                <h3 className="mt-2 text-base font-semibold text-slate-900">添加平台</h3>
+                <p className="mt-2 text-sm leading-6 text-stone-500">选择要加入监控面板的平台。后续仍可在侧边栏内继续管理和刷新。</p>
+
+                <div className="mt-5 space-y-2.5">
                     {availablePlatforms.map((id) => {
                         const config = PLATFORM_CONFIGS[id]
                         return (
                             <button
                                 key={id}
                                 onClick={() => handleAdd(id)}
-                                className="w-full flex items-center gap-3 p-2.5 rounded-md hover:bg-gray-50 border border-gray-200 transition-colors text-left"
+                                className="flex w-full items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50/60 px-3 py-3 text-left transition-colors hover:border-stone-300 hover:bg-white"
                             >
-                                <div className="w-8 h-8 rounded-md bg-gray-900 text-white flex items-center justify-center text-xs font-bold">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-xs font-bold text-white">
                                     {config.name.slice(0, 2)}
                                 </div>
-                                <div>
-                                    <div className="text-sm font-medium text-gray-900">{config.name}</div>
-                                    <div className="text-xs text-gray-400">{config.usageUrl}</div>
+                                <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium text-slate-900">{config.name}</div>
+                                    <div className="truncate text-xs text-stone-500">{config.usageUrl}</div>
                                 </div>
+                                <div className="text-xs font-medium text-stone-400">加入</div>
                             </button>
                         )
                     })}
                 </div>
                 <button
                     onClick={onClose}
-                    className="mt-3 w-full py-1.5 text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                    className="app-button-secondary mt-5 w-full"
                 >
                     取消
                 </button>

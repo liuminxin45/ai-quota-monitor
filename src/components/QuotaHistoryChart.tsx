@@ -92,7 +92,7 @@ export function QuotaHistoryChart({ model, height = 96 }: QuotaHistoryChartProps
                         y1={y}
                         x2={VIEWBOX_WIDTH - padding}
                         y2={y}
-                        stroke="rgb(226 232 240)"
+                        stroke="rgb(220 213 204)"
                         strokeDasharray={marker === 0 ? undefined : '4 6'}
                         strokeWidth="1"
                     />
@@ -100,8 +100,8 @@ export function QuotaHistoryChart({ model, height = 96 }: QuotaHistoryChartProps
             })}
 
             {actualArea ? <path d={actualArea} fill="url(#quota-history-fill)" /> : null}
-            {actualPath ? <path d={actualPath} fill="none" stroke="rgb(15 118 110)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /> : null}
-            {forecastPath ? <path d={forecastPath} fill="none" stroke="rgb(94 234 212)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" /> : null}
+            {actualPath ? <path d={actualPath} fill="none" stroke="rgb(52 95 146)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /> : null}
+            {forecastPath ? <path d={forecastPath} fill="none" stroke="rgb(122 160 205)" strokeWidth="2" strokeDasharray="6 6" strokeLinecap="round" strokeLinejoin="round" /> : null}
 
             {model.resetTimestamp ? (
                 <line
@@ -109,13 +109,13 @@ export function QuotaHistoryChart({ model, height = 96 }: QuotaHistoryChartProps
                     y1={padding}
                     x2={VIEWBOX_WIDTH - padding}
                     y2={height - padding}
-                    stroke="rgb(148 163 184)"
+                    stroke="rgb(161 161 170)"
                     strokeDasharray="3 5"
                     strokeWidth="1"
                 />
             ) : null}
 
-            <circle cx={latestX} cy={latestY} r="3.5" fill="rgb(15 118 110)" stroke="white" strokeWidth="2" />
+            <circle cx={latestX} cy={latestY} r="3.5" fill="rgb(52 95 146)" stroke="white" strokeWidth="2" />
         </svg>
     )
 }

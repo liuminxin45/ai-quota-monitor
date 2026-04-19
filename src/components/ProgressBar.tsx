@@ -7,11 +7,11 @@ interface ProgressBarProps {
 }
 
 const barColors: Record<PlatformStatus, string> = {
-    ok: 'bg-emerald-500',
+    ok: 'bg-emerald-600',
     warning: 'bg-amber-500',
-    danger: 'bg-red-500',
-    not_login: 'bg-gray-300',
-    error: 'bg-red-300',
+    danger: 'bg-rose-600',
+    not_login: 'bg-stone-300',
+    error: 'bg-rose-300',
 }
 
 export function ProgressBar({ percentage, status }: ProgressBarProps) {
@@ -20,14 +20,14 @@ export function ProgressBar({ percentage, status }: ProgressBarProps) {
 
     return (
         <div className="w-full">
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-200/80">
                 <div
                     className={`h-full rounded-full transition-all duration-500 ease-out ${color}`}
                     style={{ width: `${clamped}%` }}
                 />
             </div>
-            <div className="flex justify-end mt-0.5">
-                <span className="text-xs text-gray-500">{clamped}%</span>
+            <div className="mt-1 flex justify-end">
+                <span className="text-[11px] text-stone-500">{clamped}%</span>
             </div>
         </div>
     )
