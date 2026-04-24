@@ -1,6 +1,8 @@
 use crate::autostart;
 use crate::icon;
-use crate::model::{AppEvent, PlatformStatus, TrayPlatformSnapshot, TrayQuotaUpdatePayload, APP_NAME, BRIDGE_PORT};
+use crate::model::{
+    AppEvent, PlatformStatus, TrayPlatformSnapshot, TrayQuotaUpdatePayload, APP_NAME, BRIDGE_PORT,
+};
 use anyhow::Result;
 use chrono::{DateTime, Local, TimeZone};
 use tray_icon::{
@@ -10,9 +12,7 @@ use tray_icon::{
 
 pub struct TrayApp {
     tray_icon: TrayIcon,
-    copilot_item: MenuItem,
-    chatgpt_item: MenuItem,
-    kimi_item: MenuItem,
+    platform_items: Vec<MenuItem>,
     updated_item: MenuItem,
     server_item: MenuItem,
     startup_item: MenuItem,
@@ -23,40 +23,19 @@ pub struct TrayApp {
 
 impl TrayApp {
     pub fn new(payload: Option<TrayQuotaUpdatePayload>, startup_enabled: bool) -> Result<Self> {
-        let menu = Menu::new();
-        let copilot_item = MenuItem::new("GitHub Copilot: waiting for data", false, None);
-        let chatgpt_item = MenuItem::new("ChatGPT / Codex: waiting for data", false, None);
-        let kimi_item = MenuItem::new("Kimi: waiting for data", false, None);
-        let updated_item = MenuItem::new("Last sync: never", false, None);
-        let server_item = MenuItem::new(
-            format!("Listening on http://127.0.0.1:{BRIDGE_PORT}"),
-            false,
-            None,
-        );
-        let startup_item = MenuItem::new(startup_label(startup_enabled), true, None);
-        let exit_item = MenuItem::new("Exit", true, None);
-
-        menu.append(&copilot_item)?;
-        menu.append(&chatgpt_item)?;
-        menu.append(&kimi_item)?;
-        menu.append(&PredefinedMenuItem::separator())?;
-        menu.append(&updated_item)?;
-        menu.append(&server_item)?;
-        menu.append(&PredefinedMenuItem::separator())?;
-        menu.append(&startup_item)?;
-        menu.append(&exit_item)?;
+        let platforms = payload_platforms(&payload);
+        let (menu, platform_items, updated_item, server_item, startup_item, exit_item) =
+            build_menu(&platforms, payload.as_ref(), startup_enabled)?;
 
         let tray_icon = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
             .with_tooltip(APP_NAME)
-            .with_icon(icon::build_icon(&payload_platforms(&payload))?)
+            .with_icon(icon::build_icon(&platforms)?)
             .build()?;
 
         let mut app = Self {
             tray_icon,
-            copilot_item,
-            chatgpt_item,
-            kimi_item,
+            platform_items,
             updated_item,
             server_item,
             startup_item,
@@ -69,7 +48,9 @@ impl TrayApp {
     }
 
     pub fn refresh_runtime_status(&mut self) {
-        let _ = self.server_item.set_text(format!("Listening on http://127.0.0.1:{BRIDGE_PORT}"));
+        let _ = self
+            .server_item
+            .set_text(format!("Listening on http://127.0.0.1:{BRIDGE_PORT}"));
     }
 
     pub fn handle_app_event(&mut self, event: AppEvent) -> bool {
@@ -90,7 +71,9 @@ impl TrayApp {
                         let _ = self.startup_item.set_text(startup_label(enabled));
                     }
                     Err(error) => {
-                        let _ = self.server_item.set_text(format!("Startup toggle failed: {error}"));
+                        let _ = self
+                            .server_item
+                            .set_text(format!("Startup toggle failed: {error}"));
                     }
                 }
                 false
@@ -105,7 +88,8 @@ impl TrayApp {
             }
 
             if event.id == self.startup_item.id() {
-                let result = autostart::set_enabled(!self.startup_enabled).map_err(|error| error.to_string());
+                let result = autostart::set_enabled(!self.startup_enabled)
+                    .map_err(|error| error.to_string());
                 let _ = self.handle_app_event(AppEvent::StartupChanged(result));
             }
         }
@@ -118,20 +102,69 @@ impl TrayApp {
         let tooltip = build_tooltip(&platforms);
 
         self.tray_icon.set_tooltip(Some(tooltip))?;
-        self.tray_icon.set_icon(Some(icon::build_icon(&platforms)?))?;
-
-        let copilot = find_platform(&platforms, "github-copilot", "GitHub Copilot");
-        let chatgpt = find_platform(&platforms, "chatgpt", "ChatGPT / Codex");
-        let kimi = find_platform(&platforms, "kimi", "Kimi");
-
-        self.copilot_item.set_text(platform_menu_label(copilot));
-        self.chatgpt_item.set_text(platform_menu_label(chatgpt));
-        self.kimi_item.set_text(platform_menu_label(kimi));
-        self.updated_item.set_text(last_sync_label(self.current_payload.as_ref()));
-        self.startup_item.set_text(startup_label(self.startup_enabled));
+        self.tray_icon
+            .set_icon(Some(icon::build_icon(&platforms)?))?;
+        let (menu, platform_items, updated_item, server_item, startup_item, exit_item) =
+            build_menu(
+                &platforms,
+                self.current_payload.as_ref(),
+                self.startup_enabled,
+            )?;
+        self.tray_icon.set_menu(Some(Box::new(menu)));
+        self.platform_items = platform_items;
+        self.updated_item = updated_item;
+        self.server_item = server_item;
+        self.startup_item = startup_item;
+        self.exit_item = exit_item;
 
         Ok(())
     }
+}
+
+fn build_menu(
+    platforms: &[TrayPlatformSnapshot],
+    payload: Option<&TrayQuotaUpdatePayload>,
+    startup_enabled: bool,
+) -> Result<(Menu, Vec<MenuItem>, MenuItem, MenuItem, MenuItem, MenuItem)> {
+    let menu = Menu::new();
+    let mut platform_items = Vec::new();
+
+    if platforms.is_empty() {
+        let item = MenuItem::new("No platforms added", false, None);
+        menu.append(&item)?;
+        platform_items.push(item);
+    } else {
+        for platform in platforms {
+            let item = MenuItem::new(platform_menu_label(platform), false, None);
+            menu.append(&item)?;
+            platform_items.push(item);
+        }
+    }
+
+    let updated_item = MenuItem::new(last_sync_label(payload), false, None);
+    let server_item = MenuItem::new(
+        format!("Listening on http://127.0.0.1:{BRIDGE_PORT}"),
+        false,
+        None,
+    );
+    let startup_item = MenuItem::new(startup_label(startup_enabled), true, None);
+    let exit_item = MenuItem::new("Exit", true, None);
+
+    menu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&updated_item)?;
+    menu.append(&server_item)?;
+    menu.append(&PredefinedMenuItem::separator())?;
+    menu.append(&startup_item)?;
+    menu.append(&exit_item)?;
+
+    Ok((
+        menu,
+        platform_items,
+        updated_item,
+        server_item,
+        startup_item,
+        exit_item,
+    ))
 }
 
 fn startup_label(enabled: bool) -> String {
@@ -145,39 +178,23 @@ fn startup_label(enabled: bool) -> String {
 fn payload_platforms(payload: &Option<TrayQuotaUpdatePayload>) -> Vec<TrayPlatformSnapshot> {
     payload
         .as_ref()
-        .map(|payload| payload.platforms.clone())
+        .map(|payload| {
+            payload
+                .platforms
+                .iter()
+                .filter(|platform| platform.enabled)
+                .cloned()
+                .collect()
+        })
         .unwrap_or_default()
 }
 
-fn find_platform<'a>(
-    platforms: &'a [TrayPlatformSnapshot],
-    id: &str,
-    fallback_name: &'a str,
-) -> TrayPlatformSnapshot {
-    platforms
-        .iter()
-        .find(|platform| platform.id == id)
-        .cloned()
-        .unwrap_or_else(|| TrayPlatformSnapshot {
-            id: id.to_string(),
-            name: fallback_name.to_string(),
-            enabled: false,
-            status: PlatformStatus::NotLogin,
-            remaining_percentage: None,
-            used_percentage: None,
-            last_updated: None,
-            error_message: None,
-        })
-}
-
 fn build_tooltip(platforms: &[TrayPlatformSnapshot]) -> String {
-    let order = [
-        find_platform(platforms, "github-copilot", "GitHub Copilot"),
-        find_platform(platforms, "chatgpt", "ChatGPT / Codex"),
-        find_platform(platforms, "kimi", "Kimi"),
-    ];
+    if platforms.is_empty() {
+        return format!("{APP_NAME}: no platforms added");
+    }
 
-    order
+    platforms
         .iter()
         .map(|platform| {
             let short_name = if platform.id == "github-copilot" {
@@ -189,7 +206,9 @@ fn build_tooltip(platforms: &[TrayPlatformSnapshot]) -> String {
             };
 
             match platform.remaining_percentage {
-                Some(value) if platform.enabled => format!("{short_name} {}%", value.round() as i64),
+                Some(value) if platform.enabled => {
+                    format!("{short_name} {}%", value.round() as i64)
+                }
                 _ if !platform.enabled => format!("{short_name} off"),
                 _ => format!("{short_name} --"),
             }
@@ -198,7 +217,7 @@ fn build_tooltip(platforms: &[TrayPlatformSnapshot]) -> String {
         .join(" | ")
 }
 
-fn platform_menu_label(platform: TrayPlatformSnapshot) -> String {
+fn platform_menu_label(platform: &TrayPlatformSnapshot) -> String {
     if !platform.enabled {
         return format!("{}: disabled", platform.name);
     }
@@ -212,10 +231,7 @@ fn platform_menu_label(platform: TrayPlatformSnapshot) -> String {
         PlatformStatus::Error => format!(
             "{}: {}",
             platform.name,
-            platform
-                .error_message
-                .as_deref()
-                .unwrap_or("sync error")
+            platform.error_message.as_deref().unwrap_or("sync error")
         ),
         _ => format!("{}: waiting for data", platform.name),
     }
@@ -226,7 +242,8 @@ fn last_sync_label(payload: Option<&TrayQuotaUpdatePayload>) -> String {
         return "Last sync: never".to_string();
     };
 
-    let datetime: Option<DateTime<Local>> = Local.timestamp_millis_opt(payload.generated_at).single();
+    let datetime: Option<DateTime<Local>> =
+        Local.timestamp_millis_opt(payload.generated_at).single();
     match datetime {
         Some(value) => format!("Last sync: {}", value.format("%Y-%m-%d %H:%M:%S")),
         None => "Last sync: unknown".to_string(),

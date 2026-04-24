@@ -247,6 +247,8 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
     const [refreshing, setRefreshing] = useState(false)
     const [showSubscriptionDialog, setShowSubscriptionDialog] = useState(false)
     const [showPriceDialog, setShowPriceDialog] = useState(false)
+    const [showRemoveDialog, setShowRemoveDialog] = useState(false)
+    const [removing, setRemoving] = useState(false)
     const [detailsExpanded, setDetailsExpanded] = useState(false)
 
     const historyEnabled = !compact && platform.status !== 'not_login' && platform.status !== 'error' && !!platform.usage
@@ -273,6 +275,16 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
 
     const handleLogin = async () => {
         await sendToBackground({ type: 'OPEN_LOGIN', platformId: platform.id })
+    }
+
+    const handleRemove = async () => {
+        setRemoving(true)
+        try {
+            await sendToBackground({ type: 'REMOVE_PLATFORM', platformId: platform.id })
+            setShowRemoveDialog(false)
+        } finally {
+            setRemoving(false)
+        }
     }
 
     const initials = platformInitials[platform.id] ?? platform.name.slice(0, 2)
@@ -388,6 +400,15 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
                                     </svg>
                                 </ActionIcon>
                             ) : null}
+
+                            <ActionIcon
+                                title="删除平台"
+                                onClick={() => setShowRemoveDialog(true)}
+                            >
+                                <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.25 4.75V4A1.25 1.25 0 018.5 2.75h3A1.25 1.25 0 0112.75 4v.75M4.75 4.75h10.5M6.25 7.25l.5 8A1.5 1.5 0 008.25 16.75h3.5a1.5 1.5 0 001.5-1.5l.5-8M8.75 8.75v5M11.25 8.75v5" />
+                                </svg>
+                            </ActionIcon>
                         </div>
                     ) : null}
                 </div>
@@ -552,6 +573,24 @@ export function PlatformCard({ platform, compact = false }: PlatformCardProps) {
 
             {!compact && showPriceDialog ? (
                 <PlatformPriceDialog platform={platform} onClose={() => setShowPriceDialog(false)} />
+            ) : null}
+
+            {!compact && showRemoveDialog ? (
+                <div className="modal-backdrop">
+                    <div className="modal-panel">
+                        <p className="app-kicker">Remove</p>
+                        <h3 className="mt-2 text-base font-semibold text-slate-900">删除 {platform.name}</h3>
+                        <p className="mt-2 text-sm leading-6 text-stone-500">删除后会从面板和托盘中移除，并清空这个平台的历史趋势记录。之后仍可重新添加。</p>
+                        <div className="mt-5 flex justify-end gap-2">
+                            <button onClick={() => setShowRemoveDialog(false)} disabled={removing} className="app-button-secondary">
+                                取消
+                            </button>
+                            <button onClick={handleRemove} disabled={removing} className="app-button-primary bg-rose-700 hover:bg-rose-800">
+                                {removing ? '删除中…' : '删除平台'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
             ) : null}
         </section>
     )

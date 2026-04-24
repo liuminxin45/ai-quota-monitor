@@ -1,6 +1,6 @@
 import type { AppMessage, PlatformId } from '../shared/types'
 import { onMessage } from '../shared/messaging'
-import { appendUsageSnapshot, getAppState, getPlatforms, setPlatforms, updatePlatform, updateSettings } from '../shared/storage'
+import { appendUsageSnapshot, getAppState, getPlatforms, removePlatform, setPlatforms, updatePlatform, updateSettings } from '../shared/storage'
 import { createDefaultPlatform, MAX_REFRESH_INTERVAL_SECONDS, MIN_REFRESH_INTERVAL_SECONDS, PLATFORM_CONFIGS } from '../shared/constants'
 import { refreshAllPlatforms, refreshPlatform, calculateStatus } from './platformManager'
 import { computeBurdenScore } from '../shared/burden'
@@ -71,7 +71,7 @@ async function handleMessage(message: AppMessage): Promise<unknown> {
         }
 
         case 'REMOVE_PLATFORM': {
-            await updatePlatform(message.platformId, { enabled: false })
+            await removePlatform(message.platformId)
             return { success: true }
         }
 

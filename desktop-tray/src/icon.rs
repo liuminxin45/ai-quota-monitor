@@ -11,14 +11,19 @@ const BAR_TOP: u32 = 4;
 
 pub fn build_icon(platforms: &[TrayPlatformSnapshot]) -> Result<Icon> {
     let mut image = RgbaImage::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
-    let defaults = [
+    let placeholders = [
         placeholder_platform("GitHub Copilot"),
         placeholder_platform("ChatGPT / Codex"),
         placeholder_platform("Kimi"),
     ];
+    let enabled_platforms = platforms
+        .iter()
+        .filter(|platform| platform.enabled)
+        .take(3)
+        .collect::<Vec<_>>();
 
-    for (index, platform) in defaults.iter().enumerate() {
-        let source = platforms.get(index).unwrap_or(platform);
+    for (index, placeholder) in placeholders.iter().enumerate() {
+        let source = enabled_platforms.get(index).copied().unwrap_or(placeholder);
         draw_bar(&mut image, index as u32, source);
     }
 
@@ -29,7 +34,7 @@ fn placeholder_platform(name: &str) -> TrayPlatformSnapshot {
     TrayPlatformSnapshot {
         id: name.to_string(),
         name: name.to_string(),
-        enabled: true,
+        enabled: false,
         status: PlatformStatus::NotLogin,
         remaining_percentage: None,
         used_percentage: None,
@@ -40,7 +45,11 @@ fn placeholder_platform(name: &str) -> TrayPlatformSnapshot {
 
 fn draw_bar(image: &mut RgbaImage, index: u32, platform: &TrayPlatformSnapshot) {
     let left = 4 + index * (BAR_WIDTH + BAR_GAP);
-    let height = ((platform.remaining_percentage.unwrap_or(0.0).clamp(0.0, 100.0) / 100.0)
+    let height = ((platform
+        .remaining_percentage
+        .unwrap_or(0.0)
+        .clamp(0.0, 100.0)
+        / 100.0)
         * f64::from(BAR_BOTTOM - BAR_TOP)) as u32;
     let top = BAR_BOTTOM.saturating_sub(height);
     let color = color_for(platform);
@@ -48,7 +57,8 @@ fn draw_bar(image: &mut RgbaImage, index: u32, platform: &TrayPlatformSnapshot) 
 
     for x in left..left + BAR_WIDTH {
         for y in BAR_TOP..=BAR_BOTTOM {
-            let pixel = if y == BAR_TOP || y == BAR_BOTTOM || x == left || x == left + BAR_WIDTH - 1 {
+            let pixel = if y == BAR_TOP || y == BAR_BOTTOM || x == left || x == left + BAR_WIDTH - 1
+            {
                 frame
             } else if y >= top && platform.enabled {
                 color

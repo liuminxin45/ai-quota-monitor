@@ -20,7 +20,7 @@ function toTrayPlatformSnapshot(platform: Platform): TrayPlatformSnapshot {
 
 function toTrayPayload(state: AppState): TrayQuotaUpdatePayload {
     return {
-        platforms: state.platforms.map(toTrayPlatformSnapshot),
+        platforms: state.platforms.filter((platform) => platform.enabled).map(toTrayPlatformSnapshot),
         generatedAt: Date.now(),
     }
 }

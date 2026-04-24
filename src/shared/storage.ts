@@ -95,6 +95,12 @@ export async function updatePlatform(
     }
 }
 
+export async function removePlatform(platformId: PlatformId): Promise<void> {
+    const platforms = await getPlatforms()
+    await setPlatforms(platforms.filter((platform) => platform.id !== platformId))
+    await chrome.storage.local.remove(getUsageHistoryStorageKey(platformId))
+}
+
 // Get global settings
 export async function getSettings(): Promise<GlobalSettings> {
     const result = await chrome.storage.local.get(STORAGE_KEY_SETTINGS)
