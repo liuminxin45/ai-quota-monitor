@@ -1,14 +1,16 @@
+import { openFullPanel } from '../shared/fullPanel'
+
 const OPEN_SIDE_PANEL_MENU_ID = 'open-sidepanel'
 
 async function openSidePanelForWindow(windowId?: number): Promise<void> {
     if (windowId !== undefined) {
-        await chrome.sidePanel.open({ windowId })
+        await openFullPanel(windowId)
         return
     }
 
     const win = await chrome.windows.getLastFocused()
     if (win.id !== undefined) {
-        await chrome.sidePanel.open({ windowId: win.id })
+        await openFullPanel(win.id)
     }
 }
 

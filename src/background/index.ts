@@ -15,6 +15,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 
     // Keep extension action bound to the popup; side panel is opened explicitly.
     try {
+        if (!chrome.sidePanel?.setPanelBehavior) return
         await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false })
     } catch {
         // sidePanel API may not be available in all environments

@@ -4,6 +4,7 @@ import { PlatformCard } from '../components/PlatformCard'
 import { sendToBackground } from '../shared/messaging'
 import { sortPlatformsByBurdenDesc } from '../shared/platformSorting'
 import { formatMonthlyPriceRmb, getTotalMonthlyPriceRmb } from '../shared/pricing'
+import { openFullPanel } from '../shared/fullPanel'
 
 function timeAgo(timestamp?: number): string {
     if (!timestamp) return '尚未整体刷新'
@@ -42,10 +43,10 @@ export default function App() {
 
     const handleOpenSidebar = async () => {
         try {
-            await chrome.sidePanel.open({ windowId: chrome.windows.WINDOW_ID_CURRENT })
+            await openFullPanel(chrome.windows.WINDOW_ID_CURRENT)
             window.close()
         } catch (error) {
-            console.error('[AI Monitor] Failed to open side panel:', error)
+            console.error('[AI Monitor] Failed to open full panel:', error)
         }
     }
 
