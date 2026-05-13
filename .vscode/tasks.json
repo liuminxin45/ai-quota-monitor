@@ -2,39 +2,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "npm",
-            "script": "compile",
-            "problemMatcher": "$tsc",
-            "isBackground": false,
-            "presentation": {
-                "reveal": "silent"
-            },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
-        },
-        {
-            "type": "npm",
-            "script": "watch",
-            "problemMatcher": "$tsc-watch",
-            "isBackground": true,
-            "presentation": {
-                "reveal": "silent"
-            },
-            "group": "build"
-        },
-        {
-            "label": "Build Extension",
-            "type": "npm",
-            "script": "build",
-            "problemMatcher": [],
-            "presentation": {
-                "reveal": "always"
-            },
-            "group": "build"
-        },
-        {
             "label": "Build Tray (Debug)",
             "type": "shell",
             "command": "cargo build --manifest-path desktop-tray/Cargo.toml",
@@ -42,7 +9,10 @@
             "presentation": {
                 "reveal": "always"
             },
-            "group": "build"
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
             "label": "Build Tray (Release)",
@@ -62,16 +32,6 @@
             "presentation": {
                 "reveal": "always"
             }
-        },
-        {
-            "label": "Build All",
-            "type": "npm",
-            "script": "build:all",
-            "problemMatcher": [],
-            "presentation": {
-                "reveal": "always"
-            },
-            "group": "build"
         }
     ]
 }

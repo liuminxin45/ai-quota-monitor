@@ -1,39 +1,18 @@
 {
   "name": "ai-monitor",
   "version": "1.0.0",
-  "description": "AI 工具用量聚合监控浏览器扩展",
+  "description": "Pure Windows tray app for manually tracking AI subscription quota.",
   "license": "MIT",
   "type": "module",
-  "engines": {
-    "node": ">=20.0.0"
-  },
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "build:release": "npm run build && node scripts/package-zip.mjs",
-    "compile": "tsc --noEmit",
-    "watch": "tsc --noEmit --watch",
-    "build:all": "npm run build && npm run tray:build",
-    "build:all:release": "npm run build && npm run tray:build:release",
+    "build": "npm run tray:build",
+    "build:release": "npm run tray:build:release",
+    "compile": "npm run tray:build",
+    "build:all": "npm run tray:build",
+    "build:all:release": "npm run tray:build:release",
     "tray:build": "cargo build --manifest-path desktop-tray/Cargo.toml",
     "tray:build:release": "cargo build --release --manifest-path desktop-tray/Cargo.toml",
     "tray:run": "cargo run --manifest-path desktop-tray/Cargo.toml",
     "dev:desktop": "npm run tray:run"
-  },
-  "dependencies": {
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
-  },
-  "devDependencies": {
-    "@crxjs/vite-plugin": "^2.0.0-beta.33",
-    "@tailwindcss/vite": "^4.2.2",
-    "@types/chrome": "^0.1.40",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "bestzip": "^2.2.3",
-    "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.2",
-    "vite": "^8.0.8"
   }
 }

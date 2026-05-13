@@ -11,40 +11,29 @@ const BAR_TOP: u32 = 4;
 
 pub fn build_icon(platforms: &[TrayPlatformSnapshot]) -> Result<Icon> {
     let mut image = RgbaImage::from_pixel(ICON_SIZE, ICON_SIZE, Rgba([0, 0, 0, 0]));
-    let placeholders = [
-        placeholder_platform("GitHub Copilot"),
-        placeholder_platform("ChatGPT / Codex"),
-        placeholder_platform("Kimi"),
-    ];
     let enabled_platforms = platforms
         .iter()
         .filter(|platform| platform.enabled)
         .take(3)
         .collect::<Vec<_>>();
 
-    for (index, placeholder) in placeholders.iter().enumerate() {
-        let source = enabled_platforms.get(index).copied().unwrap_or(placeholder);
-        draw_bar(&mut image, index as u32, source);
+    if enabled_platforms.is_empty() {
+        draw_empty_icon(&mut image);
+    } else {
+        let bar_count = enabled_platforms.len() as u32;
+        let total_width = bar_count * BAR_WIDTH + (bar_count.saturating_sub(1)) * BAR_GAP;
+        let start_left = (ICON_SIZE.saturating_sub(total_width)) / 2;
+
+        for (index, platform) in enabled_platforms.iter().enumerate() {
+            let left = start_left + index as u32 * (BAR_WIDTH + BAR_GAP);
+            draw_bar(&mut image, left, platform);
+        }
     }
 
     Ok(Icon::from_rgba(image.into_raw(), ICON_SIZE, ICON_SIZE)?)
 }
 
-fn placeholder_platform(name: &str) -> TrayPlatformSnapshot {
-    TrayPlatformSnapshot {
-        id: name.to_string(),
-        name: name.to_string(),
-        enabled: false,
-        status: PlatformStatus::NotLogin,
-        remaining_percentage: None,
-        used_percentage: None,
-        last_updated: None,
-        error_message: None,
-    }
-}
-
-fn draw_bar(image: &mut RgbaImage, index: u32, platform: &TrayPlatformSnapshot) {
-    let left = 4 + index * (BAR_WIDTH + BAR_GAP);
+fn draw_bar(image: &mut RgbaImage, left: u32, platform: &TrayPlatformSnapshot) {
     let height = ((platform
         .remaining_percentage
         .unwrap_or(0.0)
@@ -66,6 +55,15 @@ fn draw_bar(image: &mut RgbaImage, index: u32, platform: &TrayPlatformSnapshot) 
                 Rgba([40, 40, 40, 140])
             };
             image.put_pixel(x, y, pixel);
+        }
+    }
+}
+
+fn draw_empty_icon(image: &mut RgbaImage) {
+    let color = Rgba([148, 163, 184, 210]);
+    for x in 9..23 {
+        for y in 15..18 {
+            image.put_pixel(x, y, color);
         }
     }
 }
