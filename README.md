@@ -15,7 +15,7 @@ AI Monitor 是一个 Windows 系统托盘应用，用来集中查看 ChatGPT / C
 ## 主要功能
 
 - 在系统托盘展示已勾选平台的剩余额度
-- 托盘 tooltip 使用简短汇总，例如 `ChatGPT 62% | Kimi 100% | Copilot --`
+- 托盘 tooltip 汇总各平台；ChatGPT 可显示多个已识别额度窗口，例如 `ChatGPT 5 hour usage 72% / Weekly usage 31%`
 - 托盘右键菜单显示平台状态、最近同步时间、配置入口、开机自启开关和退出入口
 - 配置面板支持登录、单平台刷新、全部刷新、手动编辑额度和备注
 - 支持自动刷新，可配置 5 到 720 分钟的刷新间隔
@@ -27,7 +27,7 @@ AI Monitor 是一个 Windows 系统托盘应用，用来集中查看 ChatGPT / C
 
 | 平台 | 平台 ID | 抓取入口 |
 | --- | --- | --- |
-| ChatGPT / Codex | `chatgpt` | `https://chatgpt.com/codex/cloud/settings/usage` |
+| ChatGPT / Codex | `chatgpt` | [Codex Usage](https://chatgpt.com/codex/cloud/settings/usage) |
 | Kimi | `kimi` | `https://www.kimi.com/code/console` |
 | GitHub Copilot | `github-copilot` | `https://github.com/settings/copilot` |
 
@@ -56,6 +56,10 @@ http://127.0.0.1:38431
 
 `显示` 只控制托盘展示。平台没有勾选时不会出现在托盘汇总中，但本地登录态和已保存数据会继续保留。
 
+ChatGPT / Codex 从页面可识别的独立额度卡片读取各窗口剩余百分比和重置时间；托盘菜单逐项显示，配置面板也展示抓取结果。原有 `remainingPercentage` / `usedPercentage` 字段继续表示周窗口，供旧配置和旧客户端使用；如果页面只提供其他窗口，旧字段为空。旧版单一周额度页面仍会降级为一个周窗口；重置时间无法解析时仅保留页面原文，页面未提供则不显示。未知卡片不会被猜成额度，抓取不到可识别数据时报告刷新失败。额度数值和窗口周期由页面决定，程序没有硬编码套餐额度。
+
+入口 URL 保留当前站点跳转所指向的 `/codex/cloud/settings/usage`；登录或工作区不同可能显示不同卡片。页面结构变化时需更新 `desktop-tray/src/chatgpt-parse.js` 与对应测试。
+
 ## 构建和开发
 
 安装依赖后可通过 npm 脚本运行：
@@ -75,6 +79,8 @@ npm run build
 ```bash
 npm run build:release
 ```
+
+单独运行解析测试：`node --test tests/chatgpt-parse.test.js`。
 
 也可以直接调用 Cargo：
 

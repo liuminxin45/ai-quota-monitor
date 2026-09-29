@@ -558,6 +558,9 @@ const CONFIG_PAGE: &str = r##"<!doctype html>
             <div>
               <p class="name">${escapeHtml(platform.name)}</p>
               <p class="meta">${escapeHtml(platform.id)}</p>
+              ${platform.id === "chatgpt" ? (platform.quotaWindows || []).map(window =>
+                `<p class="meta">${escapeHtml(window.label)} ${Math.round(window.remainingPercentage)}%${window.resetAt || window.resetText ? ` · 重置 ${escapeHtml(window.resetAt ? formatTime(window.resetAt) : window.resetText)}` : ""}</p>`
+              ).join("") : ""}
               <div class="bar"><span class="${statusClass(value)}" style="width:${value || 0}%"></span></div>
             </div>
           </div>
@@ -591,6 +594,7 @@ const CONFIG_PAGE: &str = r##"<!doctype html>
         const enabledInput = item.querySelector('[data-field="enabled"]');
         const rawRemaining = remainingInput.value.trim();
         const remaining = rawRemaining === "" ? null : Math.min(Math.max(Number(rawRemaining), 0), 100);
+        const previous = config.platforms.find((platform) => platform.id === id);
         return {
           id,
           name,
@@ -599,7 +603,8 @@ const CONFIG_PAGE: &str = r##"<!doctype html>
           remainingPercentage: remaining,
           usedPercentage: remaining === null ? null : 100 - remaining,
           lastUpdated: Date.now(),
-          errorMessage: errorInput.value.trim() || null
+          errorMessage: errorInput.value.trim() || null,
+          quotaWindows: remaining === previous?.remainingPercentage ? (previous?.quotaWindows || []) : []
         };
       });
       const intervalMinutes = Math.min(Math.max(Number(refreshIntervalEl.value || 30), 5), 720);

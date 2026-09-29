@@ -33,6 +33,19 @@ pub struct TrayPlatformSnapshot {
     pub used_percentage: Option<f64>,
     pub last_updated: Option<i64>,
     pub error_message: Option<String>,
+    #[serde(default)]
+    pub quota_windows: Vec<QuotaWindow>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuotaWindow {
+    pub label: String,
+    pub remaining_percentage: f64,
+    #[serde(default)]
+    pub reset_at: Option<i64>,
+    #[serde(default)]
+    pub reset_text: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,6 +118,10 @@ impl AppConfig {
         }
 
         for platform in &mut self.platforms {
+            platform.quota_windows.retain(|window| window.remaining_percentage.is_finite());
+            for window in &mut platform.quota_windows {
+                window.remaining_percentage = window.remaining_percentage.clamp(0.0, 100.0);
+            }
             platform.status = status_for_platform(platform);
             if let Some(remaining) = platform.remaining_percentage {
                 platform.remaining_percentage = Some(remaining.clamp(0.0, 100.0));
@@ -219,6 +236,8 @@ pub struct WebScrapeResult {
     pub used_percentage: Option<f64>,
     pub remaining_percentage: Option<f64>,
     pub error: Option<String>,
+    #[serde(default)]
+    pub quota_windows: Vec<QuotaWindow>,
 }
 
 fn default_platform(id: &str) -> TrayPlatformSnapshot {
@@ -233,6 +252,7 @@ fn default_platform(id: &str) -> TrayPlatformSnapshot {
         used_percentage: None,
         last_updated: None,
         error_message: None,
+        quota_windows: Vec::new(),
     }
 }
 
@@ -270,7 +290,13 @@ fn status_for_platform(platform: &TrayPlatformSnapshot) -> PlatformStatus {
         return PlatformStatus::NotLogin;
     }
 
-    match platform.remaining_percentage {
+    let remaining = if platform.id == "chatgpt" && !platform.quota_windows.is_empty() {
+        platform.quota_windows.iter().map(|window| window.remaining_percentage)
+            .reduce(f64::min)
+    } else {
+        platform.remaining_percentage
+    };
+    match remaining {
         Some(value) if value <= 10.0 => PlatformStatus::Danger,
         Some(value) if value <= 30.0 => PlatformStatus::Warning,
         Some(_) => PlatformStatus::Ok,
