@@ -211,6 +211,7 @@ impl TrayApp {
                 used_percentage: None,
                 remaining_percentage: None,
                 error: Some(error.to_string()),
+                quota_windows: Vec::new(),
             });
         }
     }
@@ -242,6 +243,7 @@ impl TrayApp {
                     .map(|value| value.clamp(0.0, 100.0));
                 platform.remaining_percentage = remaining;
                 platform.used_percentage = used;
+                platform.quota_windows = result.quota_windows;
                 platform.error_message = None;
             } else {
                 platform.status = PlatformStatus::Error;
@@ -288,6 +290,20 @@ fn build_menu(
             let item = MenuItem::new(platform_menu_label(platform), false, None);
             menu.append(&item)?;
             platform_items.push(item);
+            if platform.id == "chatgpt" {
+                for window in &platform.quota_windows {
+                    let reset = window.reset_at
+                        .and_then(|value| Local.timestamp_millis_opt(value).single())
+                        .map(|value| value.format("%m-%d %H:%M").to_string())
+                        .or_else(|| window.reset_text.clone());
+                    let label = format!("  {} {}%{}", window.label,
+                        window.remaining_percentage.round() as i64,
+                        reset.map(|value| format!(" · 重置 {value}")).unwrap_or_default());
+                    let item = MenuItem::new(label, false, None);
+                    menu.append(&item)?;
+                    platform_items.push(item);
+                }
+            }
         }
     }
 
@@ -347,6 +363,11 @@ fn build_tooltip(platforms: &[TrayPlatformSnapshot]) -> String {
         .map(|platform| {
             let short_name = short_platform_name(platform);
 
+            if platform.id == "chatgpt" && !platform.quota_windows.is_empty() {
+                return format!("{short_name} {}", platform.quota_windows.iter()
+                    .map(|window| format!("{} {}%", window.label, window.remaining_percentage.round() as i64))
+                    .collect::<Vec<_>>().join(" / "));
+            }
             match platform.remaining_percentage {
                 Some(value) if platform.enabled => {
                     format!("{short_name} {}%", value.round() as i64)
@@ -364,6 +385,9 @@ fn platform_menu_label(platform: &TrayPlatformSnapshot) -> String {
         return format!("{} 已隐藏", short_platform_name(platform));
     }
 
+    if platform.id == "chatgpt" && !platform.quota_windows.is_empty() {
+        return format!("{} 额度窗口", short_platform_name(platform));
+    }
     if let Some(remaining) = platform.remaining_percentage {
         return format!(
             "{} {}%",

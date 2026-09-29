@@ -126,6 +126,7 @@ fn build_scrape_script(platform_id: &str) -> String {
         r####"
 (() => {{
   const platformId = {platform_id_json};
+  {chatgpt_parser}
   let posted = false;
 
   function post(payload) {{
@@ -136,6 +137,7 @@ fn build_scrape_script(platform_id: &str) -> String {
       success: Boolean(payload.success),
       usedPercentage: payload.usedPercentage ?? null,
       remainingPercentage: payload.remainingPercentage ?? null,
+      quotaWindows: payload.quotaWindows ?? [],
       error: payload.error ?? null
     }}));
   }}
@@ -218,33 +220,50 @@ fn build_scrape_script(platform_id: &str) -> String {
     }}
 
     const articles = document.querySelectorAll("article");
+    const cards = [...articles].map(article => ({{
+      text: article.innerText || article.textContent || "",
+      percentText: article.querySelector("span.text-2xl")?.textContent?.trim(),
+      width: article.querySelector('div[style*="width"]:not(.w-full)')?.style?.width
+    }}));
+    const quotaWindows = parseChatGptCards(cards);
+    if (quotaWindows.length) {{
+      const weekly = quotaWindows.find(window => /每周|weekly/i.test(window.label));
+      // Legacy scalar is weekly when available; otherwise leave it unset.
+      return {{ success: true, quotaWindows,
+        remainingPercentage: weekly?.remainingPercentage ?? null,
+        usedPercentage: weekly ? 100 - weekly.remainingPercentage : null }};
+    }}
     let targetArticle = null;
-    let fallbackArticle = null;
     for (const article of articles) {{
       const articleText = article.textContent ?? "";
       if (/每周使用限额|weekly\s+usage/i.test(articleText)) {{
         targetArticle = article;
         break;
       }}
-      if (!fallbackArticle && /\d+%/.test(articleText) && /剩余|remaining/i.test(articleText)) {{
-        fallbackArticle = article;
-      }}
     }}
-    targetArticle = targetArticle || fallbackArticle;
     if (targetArticle) {{
       const percentSpan = targetArticle.querySelector("span.text-2xl");
       const percentText = percentSpan?.textContent?.trim() ?? "";
       const percentMatch = percentText.match(/^(\d+(?:\.\d+)?)%$/);
-      if (percentMatch) return resultFromRemainingPercent(parseFloat(percentMatch[1]));
+      if (percentMatch) {{
+        const legacy = resultFromRemainingPercent(parseFloat(percentMatch[1]));
+        return {{ ...legacy, quotaWindows: [{{ label: "每周使用限额", remainingPercentage: legacy.remainingPercentage, resetAt: null, resetText: null }}] }};
+      }}
 
       const bar = targetArticle.querySelector('div[style*="width"]:not(.w-full)');
       const widthMatch = bar?.style?.width?.match(/(\d+(?:\.\d+)?)%/);
-      if (widthMatch) return resultFromRemainingPercent(parseFloat(widthMatch[1]));
+      if (widthMatch) {{
+        const legacy = resultFromRemainingPercent(parseFloat(widthMatch[1]));
+        return {{ ...legacy, quotaWindows: [{{ label: "每周使用限额", remainingPercentage: legacy.remainingPercentage, resetAt: null, resetText: null }}] }};
+      }}
     }}
 
     const allText = document.body.innerText || "";
     const weeklyMatch = allText.match(/(?:每周使用限额|weekly\s+usage)[\s\S]{{0,80}}?(\d+(?:\.\d+)?)%/i);
-    if (weeklyMatch) return resultFromRemainingPercent(parseFloat(weeklyMatch[1]));
+    if (weeklyMatch) {{
+      const legacy = resultFromRemainingPercent(parseFloat(weeklyMatch[1]));
+      return {{ ...legacy, quotaWindows: [{{ label: "每周使用限额", remainingPercentage: legacy.remainingPercentage, resetAt: null, resetText: null }}] }};
+    }}
 
     return {{ success: false, error: "Could not find ChatGPT usage data" }};
   }}
@@ -306,6 +325,7 @@ fn build_scrape_script(platform_id: &str) -> String {
 }})();
 "####,
         platform_id_json =
-            serde_json::to_string(platform_id).unwrap_or_else(|_| "\"\"".to_string())
+            serde_json::to_string(platform_id).unwrap_or_else(|_| "\"\"".to_string()),
+        chatgpt_parser = include_str!("chatgpt-parse.js")
     )
 }
